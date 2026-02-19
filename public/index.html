@@ -1,0 +1,2672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AniSearch</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#080810">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #080810; --surface: #0f0f1e; --surface2: #161628;
+      --border: rgba(255,255,255,0.07); --accent: #ff6b35; --accent2: #ff9a5c;
+      --text: #e8e8f0; --muted: #666688; --sub: #38bdf8; --dub: #4ade80; --radius: 12px;
+    }
+    html { scroll-behavior: smooth; }
+    body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; overflow-x: hidden; }
+    body::before {
+      content: ''; position: fixed; top: -40%; left: 50%; transform: translateX(-50%);
+      width: 900px; height: 600px;
+      background: radial-gradient(ellipse, rgba(255,107,53,0.07) 0%, transparent 65%);
+      pointer-events: none; z-index: 0;
+    }
+    .app { position: relative; z-index: 1; min-height: 100vh; display: flex; flex-direction: column; }
+    header { padding: 80px 24px 0; text-align: center; }
+    .logo { font-family: 'Bebas Neue', sans-serif; font-size: 4.5rem; letter-spacing: 0.12em; background: linear-gradient(135deg, #ff6b35, #ff9a5c, #ffcc80); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; line-height: 1; margin-bottom: 8px; }
+    .tagline { font-size: 13px; color: var(--muted); letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 24px; }
+
+    .nav-tabs { display: flex; justify-content: center; gap: 4px; margin-bottom: 28px; background: var(--surface); border: 1px solid var(--border); border-radius: 50px; padding: 4px; max-width: 320px; margin-left: auto; margin-right: auto; position: fixed; top: 12px; left: 50%; transform: translateX(-50%); z-index: 50; margin: 0; width: min(320px, calc(100% - 48px)); }
+    .nav-tab { flex: 1; padding: 8px 20px; border: none; background: transparent; color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; border-radius: 50px; cursor: pointer; transition: background 0.18s, color 0.18s; display: flex; align-items: center; justify-content: center; gap: 7px; white-space: nowrap; }
+    .nav-tab svg { width: 15px; height: 15px; flex-shrink: 0; }
+    .nav-tab.active { background: var(--accent); color: #fff; }
+    .nav-tab:not(.active):hover { background: rgba(255,255,255,0.06); color: var(--text); }
+    .dl-badge { background: var(--accent); color: #fff; font-size: 9px; font-weight: 800; padding: 1px 5px; border-radius: 99px; min-width: 16px; text-align: center; display: none; }
+    .dl-badge.show { display: inline-block; }
+
+    .search-wrap { max-width: 620px; margin: 0 auto 48px; position: relative; }
+    .search-input { width: 100%; padding: 16px 56px 16px 22px; background: var(--surface); border: 1.5px solid var(--border); border-radius: 50px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 15px; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
+    .search-input::placeholder { color: var(--muted); }
+    .search-input:focus { border-color: rgba(255,107,53,0.5); box-shadow: 0 0 0 4px rgba(255,107,53,0.08); }
+    .search-btn { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 38px; height: 38px; border-radius: 50%; background: var(--accent); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s, transform 0.15s; }
+    .search-btn:hover { background: var(--accent2); transform: translateY(-50%) scale(1.05); }
+    main { flex: 1; padding: 0 24px 60px; max-width: 1300px; margin: 0 auto; width: 100%; }
+    .state-msg { text-align: center; padding: 80px 24px; color: var(--muted); font-size: 15px; }
+    .state-msg .icon { font-size: 48px; margin-bottom: 12px; }
+    .spinner { width: 36px; height: 36px; border: 3px solid rgba(255,107,53,0.2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; margin: 0 auto 16px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .section-label { font-size: 11px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); margin-bottom: 18px; }
+    .results-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(155px, 1fr)); gap: 20px; margin-bottom: 32px; }
+    .result-card { cursor: pointer; border-radius: var(--radius); overflow: hidden; background: var(--surface); border: 1.5px solid var(--border); transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s; }
+    .result-card:hover { transform: translateY(-5px); border-color: rgba(255,107,53,0.35); box-shadow: 0 16px 40px rgba(0,0,0,0.5); }
+    .card-poster { position: relative; aspect-ratio: 3/4; overflow: hidden; background: var(--surface2); }
+    .card-poster img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.3s; }
+    .result-card:hover .card-poster img { transform: scale(1.06); }
+    .card-badges { position: absolute; top: 8px; left: 8px; display: flex; flex-direction: column; gap: 4px; }
+    .badge-sm { font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .badge-type { background: rgba(0,0,0,0.65); color: #ccc; }
+    .badge-age { background: rgba(255,107,53,0.85); color: #fff; }
+    .card-eps-row { position: absolute; bottom: 0; left: 0; right: 0; padding: 22px 8px 8px; background: linear-gradient(transparent, rgba(0,0,0,0.8)); display: flex; gap: 4px; flex-wrap: wrap; }
+    .ep-tag { font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 3px; }
+    .ep-tag.sub { background: rgba(56,189,248,0.2); color: var(--sub); border: 1px solid rgba(56,189,248,0.3); }
+    .ep-tag.dub { background: rgba(74,222,128,0.2); color: var(--dub); border: 1px solid rgba(74,222,128,0.3); }
+    .card-body { padding: 10px 12px 12px; }
+    .card-title { font-size: 12.5px; font-weight: 600; line-height: 1.4; color: var(--text); display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .card-dur { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+    .downloads-page { padding: 0; }
+
+    .dl-manager {
+      margin-bottom: 28px;
+      padding: 14px 16px 12px;
+      border-radius: 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      box-shadow: 0 18px 40px rgba(0,0,0,0.45);
+    }
+    .dl-manager-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    .dl-manager-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-family: 'DM Sans', sans-serif;
+    }
+    .dl-manager-setting {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      color: var(--muted);
+      font-family: 'DM Sans', sans-serif;
+      white-space: nowrap;
+    }
+    #dlMaxConcurrentSlider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100px;
+      height: 3px;
+      border-radius: 99px;
+      background: rgba(255,255,255,0.14);
+      outline: none;
+      cursor: pointer;
+    }
+    #dlMaxConcurrentSlider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.5);
+    }
+    #dlMaxConcurrentSlider::-moz-range-thumb {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: none;
+      cursor: pointer;
+    }
+    #dlMaxConcurrentLabel {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text);
+      min-width: 18px;
+      text-align: right;
+    }
+    .dl-queue-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    .dl-queue-empty {
+      font-size: 12px;
+      color: var(--muted);
+      padding-top: 4px;
+    }
+    .dl-task {
+      padding: 9px 10px;
+      border-radius: 10px;
+      background: rgba(12,12,18,0.9);
+      border: 1px solid rgba(255,255,255,0.06);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .dl-task-main {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .dl-task-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .dl-task-meta {
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .dl-task-progress {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .dl-task-bar {
+      flex: 1;
+      height: 4px;
+      border-radius: 99px;
+      background: rgba(255,255,255,0.10);
+      overflow: hidden;
+    }
+    .dl-task-bar-fill {
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #ff6b35, #ff9a5c);
+      transition: width 0.22s ease-out;
+    }
+    .dl-task-progress-label {
+      font-size: 10px;
+      color: var(--muted);
+      min-width: 58px;
+      text-align: right;
+    }
+    .dl-task-cancel {
+      align-self: flex-end;
+      margin-top: 2px;
+      padding: 3px 10px;
+      border-radius: 999px;
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.10);
+      color: rgba(255,255,255,0.7);
+      font-size: 10px;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.1s;
+    }
+    .dl-task-cancel:hover:not(:disabled) {
+      background: rgba(255,107,53,0.12);
+      border-color: rgba(255,107,53,0.7);
+      color: #fff;
+      transform: translateY(-1px);
+    }
+    .dl-task-cancel:disabled {
+      opacity: 0.45;
+      cursor: default;
+    }
+
+    .dl-anime-group { margin-bottom: 36px; }
+    .dl-anime-header { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+    .dl-anime-poster { width: 48px; height: 64px; border-radius: 6px; object-fit: cover; background: var(--surface2); flex-shrink: 0; }
+    .dl-anime-info { flex: 1; min-width: 0; }
+    .dl-anime-title { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .dl-anime-count { font-size: 11px; color: var(--muted); }
+    .dl-anime-delete-all { background: none; border: 1px solid rgba(255,107,53,0.3); color: rgba(255,107,53,0.7); border-radius: 6px; padding: 5px 12px; font-size: 11px; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+    .dl-anime-delete-all:hover { background: rgba(255,107,53,0.12); color: var(--accent); border-color: var(--accent); }
+    .dl-eps-list { display: flex; flex-direction: column; gap: 8px; }
+    .dl-ep-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+    .dl-ep-item:hover { border-color: rgba(255,107,53,0.35); background: rgba(255,107,53,0.04); }
+    .dl-ep-num { width: 32px; height: 32px; border-radius: 8px; background: rgba(255,107,53,0.12); color: var(--accent); font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .dl-ep-info { flex: 1; min-width: 0; }
+    .dl-ep-title { font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .dl-ep-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .dl-ep-play { width: 32px; height: 32px; border-radius: 50%; background: var(--accent); border: none; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: background 0.15s, transform 0.1s; }
+    .dl-ep-play:hover { background: var(--accent2); transform: scale(1.08); }
+    .dl-ep-play svg { width: 14px; height: 14px; }
+    .dl-ep-delete { width: 28px; height: 28px; border-radius: 50%; background: transparent; border: 1px solid rgba(255,255,255,0.1); color: var(--muted); cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.15s; }
+    .dl-ep-delete:hover { background: rgba(255,80,80,0.15); border-color: rgba(255,80,80,0.4); color: #ff5050; }
+    .dl-ep-delete svg { width: 13px; height: 13px; }
+    .dl-ep-size { font-size: 10px; color: var(--muted); }
+    .dl-empty { text-align: center; padding: 80px 24px; }
+    .dl-empty .icon { font-size: 52px; margin-bottom: 14px; }
+    .dl-empty-title { font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
+    .dl-empty-sub { font-size: 13px; color: var(--muted); }
+
+    .auth-nav {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-left: auto;
+    }
+    .nav-auth-btn {
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.18);
+      background: transparent;
+      color: rgba(255,255,255,0.85);
+      font-size: 12px;
+      font-family: 'DM Sans', sans-serif;
+      padding: 7px 14px;
+      cursor: pointer;
+      transition: background 0.18s, border-color 0.18s, color 0.18s, transform 0.12s;
+      white-space: nowrap;
+    }
+    .nav-auth-btn:hover {
+      background: rgba(255,255,255,0.08);
+      border-color: rgba(255,255,255,0.36);
+      color: #fff;
+      transform: translateY(-1px);
+    }
+    .nav-logout-btn {
+      border-color: rgba(255,80,80,0.45);
+      color: #ff8080;
+    }
+    .nav-logout-btn:hover {
+      background: rgba(255,80,80,0.14);
+      border-color: rgba(255,80,80,0.8);
+      color: #fff;
+    }
+    .nav-user {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .nav-user-name {
+      font-size: 12px;
+      color: var(--muted);
+      max-width: 140px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .auth-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 270;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: radial-gradient(circle at top, rgba(15,15,30,0.96), rgba(3,3,8,0.96));
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 0.24s ease, visibility 0.24s ease, transform 0.24s ease;
+      transform: translateY(6px);
+    }
+    .auth-overlay.open {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: all;
+      transform: translateY(0);
+    }
+    .auth-card {
+      width: 100%;
+      max-width: 420px;
+      background: linear-gradient(145deg, rgba(255,255,255,0.02), rgba(0,0,0,0.8));
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,0.1);
+      box-shadow: 0 28px 80px rgba(0,0,0,0.9);
+      padding: 18px 20px 16px;
+      position: relative;
+      overflow: hidden;
+    }
+    .auth-card::before {
+      content: "";
+      position: absolute;
+      inset: -40%;
+      background: radial-gradient(circle at top left, rgba(255,107,53,0.22), transparent 55%);
+      opacity: 0.5;
+      pointer-events: none;
+    }
+    .auth-card > * {
+      position: relative;
+      z-index: 1;
+    }
+    .auth-close {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.16);
+      background: rgba(0,0,0,0.4);
+      color: rgba(255,255,255,0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.12s;
+    }
+    .auth-close:hover {
+      background: rgba(255,255,255,0.08);
+      border-color: rgba(255,255,255,0.35);
+      color: #fff;
+      transform: scale(1.02);
+    }
+    .auth-logo-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .auth-logo-circle {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #ff6b35, #ff9a5c);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      font-weight: 800;
+      color: #fff;
+      box-shadow: 0 8px 22px rgba(0,0,0,0.7);
+    }
+    .auth-logo-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .auth-logo-sub {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 1px;
+    }
+    .auth-tabs {
+      display: inline-flex;
+      padding: 3px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.06);
+      margin-bottom: 12px;
+    }
+    .auth-tab {
+      border-radius: 999px;
+      border: none;
+      padding: 5px 14px 6px;
+      font-size: 11px;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer;
+      background: transparent;
+      color: rgba(255,255,255,0.6);
+      transition: background 0.15s, color 0.15s, transform 0.1s;
+    }
+    .auth-tab.active {
+      background: #fff;
+      color: #111;
+      font-weight: 600;
+      transform: translateY(-0.5px);
+    }
+    .auth-body {
+      margin-top: 2px;
+    }
+    .auth-form {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .auth-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .auth-field label {
+      font-size: 11px;
+      color: rgba(255,255,255,0.75);
+    }
+    .auth-field input {
+      background: rgba(4,4,12,0.9);
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.12);
+      padding: 8px 10px;
+      font-size: 13px;
+      color: var(--text);
+      outline: none;
+      font-family: 'DM Sans', sans-serif;
+      transition: border-color 0.16s, box-shadow 0.16s, background 0.16s;
+    }
+    .auth-field input::placeholder {
+      color: rgba(255,255,255,0.35);
+    }
+    .auth-field input:focus {
+      border-color: rgba(255,107,53,0.7);
+      box-shadow: 0 0 0 3px rgba(255,107,53,0.26);
+      background: rgba(2,2,10,0.98);
+    }
+    .auth-password-hint {
+      font-size: 10px;
+      color: rgba(255,255,255,0.55);
+      margin-top: -4px;
+    }
+    .auth-submit {
+      margin-top: 6px;
+      border-radius: 999px;
+      border: none;
+      padding: 8px 16px;
+      font-size: 13px;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 600;
+      background: linear-gradient(135deg, #ff6b35, #ff9a5c);
+      color: #fff;
+      cursor: pointer;
+      box-shadow: 0 12px 28px rgba(0,0,0,0.7);
+      transition: transform 0.12s, box-shadow 0.12s, filter 0.12s;
+    }
+    .auth-submit:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 18px 40px rgba(0,0,0,0.85);
+      filter: brightness(1.03);
+    }
+    .auth-error {
+      margin-top: 8px;
+      font-size: 11px;
+      color: #ff8b8b;
+      min-height: 14px;
+    }
+
+    .batch-dl-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 260;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(3,3,10,0.82);
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 0.22s ease, visibility 0.22s ease;
+    }
+    .batch-dl-overlay.open {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: all;
+    }
+    .batch-dl-card {
+      width: 100%;
+      max-width: 420px;
+      background: radial-gradient(circle at top left, rgba(255,107,53,0.12), transparent 55%), #050510;
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: 0 28px 80px rgba(0,0,0,0.85);
+      padding: 16px 18px 14px;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .batch-dl-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .batch-dl-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .batch-dl-subtitle {
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+    .batch-dl-close {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: transparent;
+      color: rgba(255,255,255,0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.1s;
+    }
+    .batch-dl-close:hover {
+      background: rgba(255,255,255,0.08);
+      color: #fff;
+      border-color: rgba(255,255,255,0.3);
+      transform: scale(1.02);
+    }
+    .batch-dl-body {
+      padding: 8px 0 6px;
+    }
+    .batch-dl-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .batch-dl-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--muted);
+    }
+    .batch-dl-value {
+      font-size: 12px;
+      color: var(--text);
+      font-weight: 600;
+    }
+    .batch-dl-sliders {
+      position: relative;
+      padding: 16px 2px 8px;
+    }
+    .batch-dl-track {
+      position: absolute;
+      left: 8px;
+      right: 8px;
+      top: 50%;
+      height: 3px;
+      border-radius: 99px;
+      background: rgba(255,255,255,0.12);
+      pointer-events: none;
+      transform: translateY(-50%);
+    }
+    .batch-dl-track-fill {
+      position: absolute;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #ff6b35, #ff9a5c);
+      left: 0;
+      right: 0;
+    }
+    .batch-dl-range {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      background: transparent;
+      pointer-events: none;
+      position: relative;
+      height: 24px;
+      margin: 0;
+    }
+    .batch-dl-range::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      pointer-events: auto;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #fff;
+      border: 2px solid #ff6b35;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.6);
+      cursor: pointer;
+      margin-top: -6px;
+    }
+    .batch-dl-range::-moz-range-thumb {
+      pointer-events: auto;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #fff;
+      border: 2px solid #ff6b35;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.6);
+      cursor: pointer;
+    }
+    .batch-dl-range::-webkit-slider-runnable-track {
+      height: 3px;
+      border-radius: 99px;
+      background: transparent;
+    }
+    .batch-dl-range::-moz-range-track {
+      height: 3px;
+      border-radius: 99px;
+      background: transparent;
+    }
+    .batch-dl-summary {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+    .batch-dl-footer {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .batch-dl-btn-secondary,
+    .batch-dl-btn-primary {
+      border-radius: 999px;
+      padding: 7px 16px;
+      font-size: 12px;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.1s;
+    }
+    .batch-dl-btn-secondary {
+      background: transparent;
+      border-color: rgba(255,255,255,0.16);
+      color: rgba(255,255,255,0.8);
+    }
+    .batch-dl-btn-secondary:hover {
+      background: rgba(255,255,255,0.08);
+      border-color: rgba(255,255,255,0.35);
+      color: #fff;
+      transform: translateY(-1px);
+    }
+    .batch-dl-btn-primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+      font-weight: 600;
+    }
+    .batch-dl-btn-primary:hover {
+      background: var(--accent2);
+      border-color: var(--accent2);
+      transform: translateY(-1px);
+    }
+
+    #detailOverlay { position: fixed; inset: 0; z-index: 200; opacity: 0; visibility: hidden; transition: opacity 0.4s, visibility 0.4s; }
+    #detailOverlay.open { opacity: 1; visibility: visible; }
+    .detail-bg { position: absolute; inset: 0; background-size: cover; background-position: center top; background-color: #000; }
+    .detail-bg::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to right, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.75) 40%, rgba(0,0,0,0.45) 70%, rgba(0,0,0,0.3) 100%), linear-gradient(to top, rgba(0,0,0,0.95) 0%, transparent 50%); }
+    .detail-content { position: relative; z-index: 1; height: 100vh; display: flex; align-items: center; padding: 0 8vw; overflow-y: auto; }
+    .detail-left { flex: 0 0 auto; max-width: 480px; width: 100%; padding: 60px 0; }
+    .detail-close-btn { position: fixed; top: 24px; right: 28px; z-index: 10; width: 42px; height: 42px; border-radius: 50%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); color: #fff; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; transition: background 0.15s; backdrop-filter: blur(8px); }
+    .detail-close-btn:hover { background: rgba(255,107,53,0.3); }
+    .detail-anime-title { font-family: 'Bebas Neue', sans-serif; font-size: clamp(2.8rem, 6vw, 5rem); letter-spacing: 0.08em; color: #fff; line-height: 0.95; margin-bottom: 14px; text-shadow: 0 2px 20px rgba(0,0,0,0.5); }
+    .detail-meta-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 18px; }
+    .meta-pill { font-size: 12px; font-weight: 600; padding: 4px 12px; border-radius: 99px; letter-spacing: 0.04em; }
+    .meta-pill.rating { background: rgba(255,107,53,0.2); color: var(--accent); border: 1px solid rgba(255,107,53,0.35); }
+    .meta-pill.type { background: rgba(255,255,255,0.1); color: #ddd; }
+    .meta-pill.country { background: rgba(255,255,255,0.07); color: #aaa; }
+    .meta-pill.year { background: rgba(255,255,255,0.07); color: #aaa; }
+    .detail-genres { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 20px; }
+    .genre-tag { font-size: 11px; padding: 3px 10px; border-radius: 4px; background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.55); border: 1px solid rgba(255,255,255,0.1); }
+    .detail-ep-counts { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+    .ep-pill { display: flex; align-items: center; gap: 7px; padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; }
+    .ep-pill.s { background: rgba(56,189,248,0.1); color: var(--sub); border: 1px solid rgba(56,189,248,0.2); }
+    .ep-pill.d { background: rgba(74,222,128,0.1); color: var(--dub); border: 1px solid rgba(74,222,128,0.2); }
+    .ep-pill .n { font-size: 17px; font-weight: 700; }
+    .ep-pill .l { font-size: 10px; opacity: 0.75; line-height: 1.3; }
+    .detail-description { font-size: 14px; line-height: 1.8; color: rgba(255,255,255,0.65); margin-bottom: 28px; max-height: 100px; overflow: hidden; position: relative; transition: max-height 0.4s ease; }
+    .detail-description.expanded { max-height: 600px; }
+    .detail-description:not(.expanded)::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 40px; background: linear-gradient(transparent, rgba(0,0,0,0.7)); }
+    .read-more-btn { background: none; border: none; color: var(--accent); font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; padding: 0 0 22px; display: block; }
+    .detail-actions { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+    .btn-play { display: flex; align-items: center; gap: 10px; background: #fff; color: #000; border: none; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 700; padding: 13px 28px; cursor: pointer; transition: background 0.15s, transform 0.1s; letter-spacing: 0.02em; }
+    .btn-play:hover { background: #e0e0e0; transform: scale(1.02); }
+    .btn-play svg { width: 20px; height: 20px; flex-shrink: 0; }
+    .btn-action { width: 46px; height: 46px; border-radius: 50%; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.3); color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s, border-color 0.15s; flex-shrink: 0; }
+    .btn-action:hover { background: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.6); }
+    .btn-secondary { background: rgba(255,255,255,0.08); color: #fff; }
+    .btn-secondary:hover { background: rgba(255,255,255,0.16); }
+    .btn-action svg { width: 20px; height: 20px; }
+    .detail-loading-wrap { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; color: var(--muted); }
+    .detail-err { color: #ff6b6b; font-size: 14px; }
+
+    #playerOverlay { position: fixed; inset: 0; z-index: 300; background: #000; opacity: 0; visibility: hidden; transition: opacity 0.4s, visibility 0.4s; }
+    #playerOverlay.open { opacity: 1; visibility: visible; }
+    #awVid { width: 100%; height: 100%; object-fit: contain; display: block; cursor: pointer; }
+    #awVid::cue { font-size: 0 !important; visibility: hidden !important; opacity: 0 !important; }
+    .aw-controls { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: flex-end; pointer-events: none; }
+    .aw-controls::before { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 220px; background: linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.5) 55%, transparent 100%); pointer-events: none; transition: opacity 0.3s; }
+    .aw-controls.hidden::before { opacity: 0; }
+    .aw-ctrl-bar { position: relative; display: flex; flex-direction: column; gap: 10px; padding: 0 28px 26px; pointer-events: all; transition: opacity 0.3s, transform 0.3s; }
+    .aw-controls.hidden .aw-ctrl-bar { opacity: 0; transform: translateY(10px); pointer-events: none; }
+    .aw-timebar { display: flex; align-items: center; gap: 14px; }
+    .aw-time { font-size: 12px; color: rgba(255,255,255,0.6); white-space: nowrap; user-select: none; min-width: 90px; font-family: 'DM Sans', sans-serif; }
+    .aw-track { position: relative; flex: 1; height: 3px; border-radius: 99px; background: rgba(255,255,255,0.2); cursor: pointer; transition: height 0.15s; }
+    .aw-track:hover { height: 5px; }
+    .aw-track:hover .aw-thumb { opacity: 1; }
+    .aw-buffered { position: absolute; top: 0; left: 0; height: 100%; border-radius: 99px; background: rgba(255,255,255,0.28); pointer-events: none; }
+    .aw-fill { position: absolute; top: 0; left: 0; height: 100%; border-radius: 99px; background: #ff6b35; pointer-events: none; }
+    .aw-thumb { position: absolute; top: 50%; width: 13px; height: 13px; border-radius: 50%; background: #fff; transform: translate(-50%,-50%); opacity: 0; pointer-events: none; transition: opacity 0.12s; box-shadow: 0 1px 4px rgba(0,0,0,0.5); }
+    .aw-actions { display: flex; align-items: center; gap: 2px; }
+    .aw-actions-right { margin-left: auto; display: flex; align-items: center; gap: 2px; }
+    .aw-btn { position: relative; width: 40px; height: 40px; background: transparent; border: none; border-radius: 50%; color: rgba(255,255,255,0.8); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.12s, color 0.12s, transform 0.1s; flex-shrink: 0; }
+    .aw-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+    .aw-btn:active { transform: scale(0.88); }
+    .aw-btn svg { width: 20px; height: 20px; flex-shrink: 0; }
+    .aw-btn.active { color: #ff6b35; }
+    .aw-btn::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); background: rgba(14,14,14,0.96); color: #fff; font-size: 10px; font-weight: 500; padding: 3px 8px; border-radius: 4px; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity 0.12s; border: 1px solid rgba(255,255,255,0.07); font-family: 'DM Sans', sans-serif; }
+    .aw-btn:hover::after { opacity: 1; }
+    .aw-play-btn { width: 46px; height: 46px; }
+    .aw-play-btn svg { width: 24px; height: 24px; }
+    .aw-vol { display: flex; align-items: center; gap: 4px; }
+    .aw-vol-wrap { display: flex; align-items: center; width: 0; overflow: hidden; transition: width 0.22s cubic-bezier(0.4,0,0.2,1); }
+    .aw-vol:hover .aw-vol-wrap, .aw-vol:focus-within .aw-vol-wrap { width: 80px; }
+    .aw-vol-slider { -webkit-appearance: none; appearance: none; width: 76px; height: 4px; border-radius: 99px; background: rgba(255,255,255,0.2); cursor: pointer; outline: none; background-image: linear-gradient(#ff6b35,#ff6b35); background-size: 100% 100%; background-repeat: no-repeat; }
+    .aw-vol-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: #fff; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.4); transition: transform 0.1s; }
+    .aw-vol-slider::-webkit-slider-thumb:hover { transform: scale(1.2); }
+    .aw-vol-slider::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: #fff; border: none; cursor: pointer; }
+    .aw-vol-slider::-moz-range-progress { background: #ff6b35; border-radius: 99px; }
+    .aw-panel { position: absolute; bottom: calc(100% + 8px); right: 0; background: rgba(10,10,10,0.97); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; overflow: hidden; transform: translateY(6px); opacity: 0; pointer-events: none; transition: opacity 0.18s, transform 0.18s; z-index: 30; backdrop-filter: blur(10px); }
+    .aw-panel.open { opacity: 1; transform: translateY(0); pointer-events: all; }
+    .aw-panel-hdr { font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); padding: 10px 14px 7px; border-bottom: 1px solid rgba(255,255,255,0.05); font-family: 'DM Sans', sans-serif; }
+    .aw-sub-opt { display: flex; align-items: center; gap: 8px; padding: 8px 14px; cursor: pointer; font-size: 12px; color: rgba(255,255,255,0.65); transition: background 0.1s, color 0.1s; user-select: none; white-space: nowrap; font-family: 'DM Sans', sans-serif; min-width: 160px; }
+    .aw-sub-opt:hover { background: rgba(255,255,255,0.06); color: #fff; }
+    .aw-sub-opt.selected { color: #ff6b35; }
+    .aw-sub-opt .ck { width: 13px; height: 13px; flex-shrink: 0; opacity: 0; }
+    .aw-sub-opt.selected .ck { opacity: 1; }
+    #awEpsPanel { position: absolute; bottom: calc(100% + 8px); right: 0; width: min(380px, calc(100vw - 40px)); max-height: 480px; background: rgba(10,10,10,0.97); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; overflow: hidden; transform: translateY(6px); opacity: 0; pointer-events: none; transition: opacity 0.18s, transform 0.18s; z-index: 30; backdrop-filter: blur(10px); display: flex; flex-direction: column; }
+    #awEpsPanel.open { opacity: 1; transform: translateY(0); pointer-events: all; }
+    .eps-panel-hdr { font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); padding: 10px 14px 8px; border-bottom: 1px solid rgba(255,255,255,0.06); font-family: 'DM Sans', sans-serif; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; }
+    .eps-panel-hdr span { color: rgba(255,255,255,0.3); font-size: 9px; }
+    .eps-panel-list { overflow-y: auto; flex: 1; }
+    .eps-panel-list::-webkit-scrollbar { width: 4px; }
+    .eps-panel-list::-webkit-scrollbar-track { background: transparent; }
+    .eps-panel-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+    .ep-list-item { display: flex; gap: 10px; padding: 10px 14px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.04); transition: background 0.12s; align-items: flex-start; }
+    .ep-list-item:hover { background: rgba(255,255,255,0.05); }
+    .ep-list-item.active { background: rgba(255,107,53,0.08); }
+    .ep-thumb-wrap { position: relative; width: 80px; min-width: 80px; height: 48px; border-radius: 6px; overflow: hidden; background: rgba(255,255,255,0.05); flex-shrink: 0; }
+    .ep-thumb-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .ep-thumb-num { position: absolute; bottom: 3px; left: 3px; background: rgba(0,0,0,0.75); color: #fff; font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 3px; }
+    .ep-list-info { flex: 1; min-width: 0; }
+    .ep-list-title { font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ep-list-desc { font-size: 11px; color: var(--muted); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .ep-list-loading { padding: 24px; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 12px; gap: 10px; }
+    .ep-list-loading .mini-spin { width: 16px; height: 16px; border: 2px solid rgba(255,107,53,0.2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
+    .aw-settings-panel { min-width: 250px; }
+    .aw-section { padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .aw-section:last-child { border-bottom: none; }
+    .aw-section-lbl { font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; display: block; font-family: 'DM Sans', sans-serif; }
+    .aw-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+    .aw-chip { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 99px; color: rgba(255,255,255,0.55); font-family: 'DM Sans', sans-serif; font-size: 11px; padding: 3px 10px; cursor: pointer; transition: background 0.12s, color 0.12s, border-color 0.12s; user-select: none; }
+    .aw-chip:hover { background: rgba(255,255,255,0.1); color: #fff; }
+    .aw-chip.active { background: rgba(255,107,53,0.12); border-color: #ff6b35; color: #ff6b35; }
+    .aw-swatches { display: flex; gap: 7px; align-items: center; }
+    .aw-swatch { width: 22px; height: 22px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: border-color 0.12s, transform 0.1s; flex-shrink: 0; }
+    .aw-swatch:hover { transform: scale(1.12); }
+    .aw-swatch.active { border-color: #ff6b35; }
+    .aw-slider-row { display: flex; align-items: center; gap: 8px; }
+    .aw-s-slider { -webkit-appearance: none; appearance: none; flex: 1; height: 3px; border-radius: 99px; background: rgba(255,255,255,0.15); cursor: pointer; outline: none; }
+    .aw-s-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: #ff6b35; cursor: pointer; }
+    .aw-s-slider::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: #ff6b35; border: none; }
+    .aw-s-val { font-size: 10px; color: rgba(255,255,255,0.4); min-width: 26px; text-align: right; user-select: none; font-family: 'DM Sans', sans-serif; }
+    .aw-captions { position: absolute; left: 50%; transform: translateX(-50%); text-align: center; font-family: 'DM Sans', sans-serif; line-height: 1.55; color: #fff; max-width: 80%; pointer-events: none; user-select: none; white-space: pre-line; opacity: 0; border-radius: 4px; padding: 2px 8px; transition: bottom 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.15s; text-shadow: 0 1px 4px rgba(0,0,0,0.95), 0 0 20px rgba(0,0,0,0.7); }
+    .aw-captions.up { bottom: var(--cap-up, 88px) !important; }
+    .aw-pulse { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%) scale(0.6); width: 70px; height: 70px; border-radius: 50%; background: rgba(255,255,255,0.14); display: flex; align-items: center; justify-content: center; pointer-events: none; opacity: 0; }
+    .aw-pulse svg { width: 28px; height: 28px; color: #fff; }
+    .aw-pulse.flash { animation: awPulse 0.4s ease-out forwards; }
+    @keyframes awPulse { 0% { opacity:1; transform:translate(-50%,-50%) scale(0.7); } 60% { opacity:0.4; transform:translate(-50%,-50%) scale(1.1); } 100% { opacity:0; transform:translate(-50%,-50%) scale(1.3); } }
+    .aw-spinner { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 38px; height: 38px; border: 2px solid rgba(255,255,255,0.1); border-top-color: #ff6b35; border-radius: 50%; animation: spin 0.7s linear infinite; pointer-events: none; opacity: 0; transition: opacity 0.18s; }
+    .aw-spinner.visible { opacity: 1; }
+    .aw-loading { position: absolute; inset: 0; background: rgba(0,0,0,0.75); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: var(--muted); font-size: 13px; font-family: 'DM Sans', sans-serif; transition: opacity 0.2s, visibility 0.2s; }
+    .aw-loading.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+    .aw-loading .aw-err { color: #ff6b6b; text-align: center; padding: 0 20px; }
+    .player-back-btn { position: absolute; top: 24px; left: 28px; z-index: 10; display: flex; align-items: center; gap: 7px; background: rgba(0,0,0,0.45); border: 1px solid rgba(255,255,255,0.1); border-radius: 99px; color: rgba(255,255,255,0.75); font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500; letter-spacing: 0.05em; padding: 7px 14px 7px 10px; cursor: pointer; pointer-events: all; transition: background 0.15s, color 0.15s, opacity 0.3s, transform 0.3s; }
+    .player-back-btn:hover { background: rgba(0,0,0,0.75); color: #fff; }
+    .player-back-btn svg { width: 16px; height: 16px; }
+    .aw-controls.hidden .player-back-btn { opacity: 0; transform: translateY(-8px); pointer-events: none; }
+    .player-top-right { position: absolute; top: 24px; right: 28px; z-index: 10; display: flex; align-items: center; gap: 8px; pointer-events: all; transition: opacity 0.3s, transform 0.3s; }
+    .aw-controls.hidden .player-top-right { opacity: 0; transform: translateY(-8px); pointer-events: none; }
+    .type-toggle { display: flex; border-radius: 8px; overflow: hidden; border: 1px solid rgba(255,255,255,0.15); }
+    .tog-btn { background: rgba(0,0,0,0.5); border: none; padding: 7px 16px; font-size: 12px; font-weight: 600; cursor: pointer; transition: background 0.15s, color 0.15s; color: rgba(255,255,255,0.5); font-family: 'DM Sans', sans-serif; }
+    .tog-btn.active { background: var(--accent); color: #fff; }
+    .tog-btn:hover:not(.active) { background: rgba(255,107,53,0.2); color: #fff; }
+
+    .aw-dl-toast {
+      position: absolute; bottom: 90px; left: 50%; transform: translateX(-50%) translateY(10px);
+      background: rgba(10,10,10,0.97); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px; padding: 16px 18px; min-width: 300px; max-width: 380px;
+      font-family: 'DM Sans', sans-serif; backdrop-filter: blur(12px);
+      opacity: 0; pointer-events: none; transition: opacity 0.22s, transform 0.22s; z-index: 40;
+    }
+    .aw-dl-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: all; }
+    .aw-dl-toast-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .aw-dl-toast-label { font-size: 12px; font-weight: 600; color: #fff; }
+    .aw-dl-toast-pct { font-size: 11px; color: var(--accent); font-weight: 700; }
+    .aw-dl-bar-bg { height: 4px; border-radius: 99px; background: rgba(255,255,255,0.12); overflow: hidden; }
+    .aw-dl-bar-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, #ff6b35, #ff9a5c); width: 0%; transition: width 0.3s ease; }
+    .aw-dl-toast-sub { font-size: 10px; color: var(--muted); margin-top: 7px; display: flex; align-items: center; justify-content: space-between; }
+    .aw-dl-cancel { background: none; border: none; color: rgba(255,255,255,0.35); font-family: 'DM Sans', sans-serif; font-size: 10px; cursor: pointer; padding: 0; transition: color 0.12s; }
+    .aw-dl-cancel:hover { color: #ff6b6b; }
+
+    @media (max-width: 700px) {
+      .logo { font-size: 3rem; }
+      .detail-left { max-width: 100%; }
+      .detail-content { padding: 0 5vw; align-items: flex-end; }
+      .detail-anime-title { font-size: 2.2rem; }
+      .results-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 14px; }
+      #awEpsPanel { position: fixed; bottom: 0; left: 0; right: 0; top: auto; width: 100%; max-height: 65vh; border-radius: 16px 16px 0 0; transform: translateY(8px); }
+      #awEpsPanel.open { transform: translateY(0); }
+      .ep-list-item { padding: 8px 12px; gap: 8px; }
+      .ep-thumb-wrap { width: 60px; min-width: 60px; height: 38px; }
+      .ep-list-desc { display: none; }
+      .ep-list-title { font-size: 13px; }
+    }
+    @media (max-height: 585px) {
+      #awEpsPanel { max-height: 80vh; border-radius: 10px 10px 0 0; }
+      .ep-list-item { padding: 6px 10px; gap: 7px; }
+      .ep-thumb-wrap { width: 50px; min-width: 50px; height: 32px; border-radius: 4px; }
+      .ep-thumb-num { font-size: 8px; padding: 1px 4px; }
+      .ep-list-title { font-size: 11px; }
+      .ep-list-desc { display: none; }
+      .eps-panel-hdr { padding: 7px 12px 5px; }
+    }
+    .tv-focus { outline: 3px solid var(--accent) !important; outline-offset: 3px !important; box-shadow: 0 0 0 6px rgba(255,107,53,0.22) !important; }
+    .result-card.tv-focus { transform: translateY(-6px) scale(1.03); border-color: var(--accent); }
+    .ep-list-item.tv-focus { background: rgba(255,107,53,0.14) !important; outline: none !important; box-shadow: none !important; border-left: 3px solid var(--accent); }
+    .aw-btn.tv-focus, .tog-btn.tv-focus { background: rgba(255,107,53,0.25) !important; color: #fff !important; }
+    .player-back-btn.tv-focus { background: rgba(255,107,53,0.35) !important; color: #fff !important; }
+    .btn-play.tv-focus, .btn-action.tv-focus { outline: 3px solid var(--accent) !important; outline-offset: 3px !important; box-shadow: 0 0 0 6px rgba(255,107,53,0.22) !important; }
+    .search-input.tv-focus { border-color: var(--accent) !important; box-shadow: 0 0 0 4px rgba(255,107,53,0.22) !important; outline: none !important; }
+    .result-card.tv-focus .card-poster img { transform: scale(1.06); }
+    .tv-seek-indicator { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); background: rgba(0,0,0,0.75); border-radius: 12px; padding: 16px 28px; color: #fff; font-family: 'DM Sans', sans-serif; font-size: 22px; font-weight: 700; pointer-events: none; opacity: 0; transition: opacity 0.15s; display: flex; align-items: center; gap: 10px; z-index: 20; }
+    .tv-seek-indicator.show { opacity: 1; }
+    .tv-seek-indicator svg { width: 26px; height: 26px; }
+    .tv-vol-indicator { position: absolute; right: 48px; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.75); border-radius: 12px; padding: 14px 20px; color: #fff; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; pointer-events: none; opacity: 0; transition: opacity 0.15s; display: flex; flex-direction: column; align-items: center; gap: 8px; z-index: 20; min-width: 64px; }
+    .tv-vol-indicator.show { opacity: 1; }
+    .tv-vol-bar { width: 6px; height: 80px; background: rgba(255,255,255,0.2); border-radius: 3px; position: relative; overflow: hidden; }
+    .tv-vol-fill { position: absolute; bottom: 0; left: 0; right: 0; background: var(--accent); border-radius: 3px; transition: height 0.1s; }
+  </style>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-analytics-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="logo">AniSearch</div>
+    <div class="tagline">Search any anime · Get everything</div>
+    <nav class="nav-tabs">
+      <button class="nav-tab active" id="tabSearch">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="6"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+        Search
+      </button>
+      <button class="nav-tab" id="tabDownloads">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+        Downloads
+        <span class="dl-badge" id="dlBadge">0</span>
+      </button>
+    </nav>
+    <div class="search-wrap" id="searchWrap">
+      <input id="q" class="search-input" type="text" placeholder="e.g. Black Clover, Naruto, Demon Slayer..." autocomplete="off" spellcheck="false">
+      <button class="search-btn" id="searchBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" width="16" height="16">
+          <circle cx="11" cy="11" r="6"/><line x1="16.5" y1="16.5" x2="21" y2="21"/>
+        </svg>
+      </button>
+    </div>
+    <div class="auth-nav" id="authNav">
+      <button class="nav-auth-btn" id="openAuthBtn">Sign in / Sign up</button>
+      <div class="nav-user" id="navUser" style="display:none">
+        <span class="nav-user-name" id="navUserName"></span>
+        <button class="nav-auth-btn nav-logout-btn" id="navLogoutBtn">Log out</button>
+      </div>
+    </div>
+  </header>
+  <main id="main">
+    <div class="state-msg"><div class="icon">🔍</div>Search for any anime above</div>
+  </main>
+</div>
+
+<div class="batch-dl-overlay" id="batchDlOverlay">
+  <div class="batch-dl-card">
+    <div class="batch-dl-header">
+      <div>
+        <div class="batch-dl-title" id="batchDlTitle">Download episodes</div>
+        <div class="batch-dl-subtitle" id="batchDlSubtitle">Select a range of episodes to save offline.</div>
+      </div>
+      <button class="batch-dl-close" id="batchDlCloseBtn">✕</button>
+    </div>
+    <div class="batch-dl-body">
+      <div class="batch-dl-row">
+        <span class="batch-dl-label">Episode range</span>
+        <span class="batch-dl-value"><span id="batchDlFromLabel">1</span> – <span id="batchDlToLabel">1</span></span>
+      </div>
+      <div class="batch-dl-sliders">
+        <div class="batch-dl-track"><div class="batch-dl-track-fill" id="batchDlTrackFill"></div></div>
+        <input type="range" class="batch-dl-range" id="batchDlFrom" min="1" max="1" value="1">
+        <input type="range" class="batch-dl-range" id="batchDlTo" min="1" max="1" value="1">
+      </div>
+      <div class="batch-dl-summary" id="batchDlSummary">Episodes 1–1</div>
+    </div>
+    <div class="batch-dl-footer">
+      <button class="batch-dl-btn-secondary" id="batchDlCancelBtn">Cancel</button>
+      <button class="batch-dl-btn-primary" id="batchDlConfirmBtn">Download</button>
+    </div>
+  </div>
+</div>
+
+<div class="auth-overlay" id="authOverlay">
+  <div class="auth-card">
+    <button class="auth-close" id="authCloseBtn">✕</button>
+    <div class="auth-logo-row">
+      <div class="auth-logo-circle">A</div>
+      <div>
+        <div class="auth-logo-title">AniAccount</div>
+        <div class="auth-logo-sub" id="authPromptText">Sign in to sync your experience.</div>
+      </div>
+    </div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="authTabLogin">Log in</button>
+      <button class="auth-tab" id="authTabSignup">Sign up</button>
+    </div>
+    <div class="auth-body">
+      <form id="authLoginForm" class="auth-form">
+        <div class="auth-field">
+          <label>Email</label>
+          <input type="email" id="loginEmail" placeholder="you@example.com" autocomplete="email">
+        </div>
+        <div class="auth-field">
+          <label>Password</label>
+          <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password">
+        </div>
+        <button type="submit" class="auth-submit">Log in</button>
+      </form>
+      <form id="authSignupForm" class="auth-form" style="display:none">
+        <div class="auth-field">
+          <label>Display name</label>
+          <input type="text" id="signupDisplayName" placeholder="What should we call you?">
+        </div>
+        <div class="auth-field">
+          <label>Username</label>
+          <input type="text" id="signupUsername" placeholder="Unique username">
+        </div>
+        <div class="auth-field">
+          <label>Email</label>
+          <input type="email" id="signupEmail" placeholder="you@example.com" autocomplete="email">
+        </div>
+        <div class="auth-field">
+          <label>Password</label>
+          <input type="password" id="signupPassword" placeholder="Minimum 8 characters" autocomplete="new-password">
+        </div>
+        <div class="auth-field">
+          <label>Confirm password</label>
+          <input type="password" id="signupConfirmPassword" placeholder="Repeat password" autocomplete="new-password">
+        </div>
+        <div class="auth-password-hint">Use at least 8 characters, including 1 uppercase letter and 1 symbol.</div>
+        <button type="submit" class="auth-submit">Create account</button>
+      </form>
+
+      <div id="authVerifyStep" style="display:none">
+        <div style="text-align:center; padding: 8px 0 4px;">
+          <div style="font-size:32px; margin-bottom:10px;">📬</div>
+          <div style="font-size:14px; font-weight:600; color:var(--text); margin-bottom:6px;">Check your inbox</div>
+          <div style="font-size:12px; color:var(--muted); line-height:1.7; margin-bottom:16px;" id="verifyEmailHint"></div>
+        </div>
+        <form id="authVerifyForm" class="auth-form">
+          <div class="auth-field">
+            <label>Verification code</label>
+            <input type="text" id="verifyCodeInput" placeholder="Enter 6-digit code" maxlength="6" autocomplete="one-time-code" inputmode="numeric">
+          </div>
+          <button type="submit" class="auth-submit">Verify & create account</button>
+        </form>
+        <div style="margin-top:10px; text-align:center;">
+          <button id="resendCodeBtn" style="background:none;border:none;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:11px;cursor:pointer;">Didn't get it? Resend</button>
+        </div>
+        <div class="auth-error" id="verifyMsg"></div>
+      </div>
+      <div class="auth-error" id="authError"></div>
+    </div>
+  </div>
+</div>
+
+<div id="detailOverlay">
+  <div class="detail-bg" id="detailBg"></div>
+  <button class="detail-close-btn" id="detailCloseBtn">✕</button>
+  <div class="detail-content">
+    <div class="detail-left" id="detailLeft">
+      <div class="detail-loading-wrap"><div class="spinner"></div>Loading...</div>
+    </div>
+  </div>
+</div>
+
+<div id="playerOverlay">
+  <video id="awVid" playsinline></video>
+  <div class="aw-spinner" id="awSpinnerEl"></div>
+  <div class="aw-pulse" id="awPulseEl">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+  </div>
+  <div class="aw-captions" id="awCaptions" style="bottom:26px"></div>
+  <div class="aw-controls" id="awControls">
+    <button class="player-back-btn" id="playerBackBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+      Back
+    </button>
+    <div class="player-top-right" id="playerTopRight">
+      <div class="type-toggle" id="typeToggle" style="display:none">
+        <button class="tog-btn tog-sub active">Sub</button>
+        <button class="tog-btn tog-dub">Dub</button>
+      </div>
+    </div>
+    <div class="aw-dl-toast" id="awDlToast">
+      <div class="aw-dl-toast-top">
+        <span class="aw-dl-toast-label" id="awDlLabel">Saving for offline...</span>
+        <span class="aw-dl-toast-pct" id="awDlPct">0%</span>
+      </div>
+      <div class="aw-dl-bar-bg"><div class="aw-dl-bar-fill" id="awDlFill"></div></div>
+      <div class="aw-dl-toast-sub">
+        <span id="awDlSub">Preparing...</span>
+        <button class="aw-dl-cancel" id="awDlCancel">Cancel</button>
+      </div>
+    </div>
+    <div class="aw-ctrl-bar">
+      <div class="aw-timebar">
+        <span class="aw-time" id="awTime">0:00 / 0:00</span>
+        <div class="aw-track" id="awTrack">
+          <div class="aw-buffered" id="awBuffered"></div>
+          <div class="aw-fill" id="awFill"></div>
+          <div class="aw-thumb" id="awThumb"></div>
+        </div>
+      </div>
+      <div class="aw-actions">
+        <button class="aw-btn aw-play-btn" id="awPlayBtn" data-tip="Play">
+          <svg id="awPlayIcon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+        </button>
+        <div class="aw-vol">
+          <button class="aw-btn" id="awMuteBtn" data-tip="Mute">
+            <svg id="awVolIcon" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M3 9v6h4l5 5V4L7 9H3z"/>
+              <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/>
+              <path d="M14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+            </svg>
+          </button>
+          <div class="aw-vol-wrap"><input type="range" class="aw-vol-slider" id="awVolSlider" min="0" max="1" step="0.01" value="1"></div>
+        </div>
+        <div class="aw-actions-right">
+          <button class="aw-btn" id="awDlBtn" data-tip="Save for Offline">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+          </button>
+          <div style="position:relative">
+            <button class="aw-btn" id="awSubBtn" data-tip="Subtitles">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zM4 12h2v2H4v-2zm10 6H4v-2h10v2zm6 0h-4v-2h4v2zm0-4H10v-2h10v2z"/></svg>
+            </button>
+            <div class="aw-panel" id="awSubPanel"><div class="aw-panel-hdr">Subtitles</div></div>
+          </div>
+          <div style="position:relative">
+            <button class="aw-btn" id="awEpsBtn" data-tip="Episodes">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8 12.5v-9l6 4.5-6 4.5z"/></svg>
+            </button>
+            <div id="awEpsPanel">
+              <div class="eps-panel-hdr">Episodes<span id="awEpsPanelCount"></span></div>
+              <div class="eps-panel-list" id="awEpsList"><div class="ep-list-loading"><div class="mini-spin"></div>Loading episodes...</div></div>
+            </div>
+          </div>
+          <div style="position:relative">
+            <button class="aw-btn" id="awSettingsBtn" data-tip="Settings">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a6.97 6.97 0 0 0-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.48.48 0 0 0-.59.22L2.74 8.87a.47.47 0 0 0 .12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.47.47 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.37 1.04.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.57 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.47.47 0 0 0-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+            </button>
+            <div class="aw-panel aw-settings-panel" id="awSettingsPanel">
+              <div class="aw-section">
+                <span class="aw-section-lbl">Text Size</span>
+                <div class="aw-slider-row"><input type="range" class="aw-s-slider" id="awSizeSlider" min="12" max="30" value="16" step="1"><span class="aw-s-val" id="awSizeVal">16px</span></div>
+              </div>
+              <div class="aw-section">
+                <span class="aw-section-lbl">Y Offset</span>
+                <div class="aw-slider-row"><input type="range" class="aw-s-slider" id="awOffsetSlider" min="8" max="80" value="26" step="2"><span class="aw-s-val" id="awOffsetVal">26px</span></div>
+              </div>
+              <div class="aw-section">
+                <span class="aw-section-lbl">Text Color</span>
+                <div class="aw-swatches">
+                  <div class="aw-swatch active" data-color="#ffffff" style="background:#fff"></div>
+                  <div class="aw-swatch" data-color="#f5f52a" style="background:#f5f52a"></div>
+                  <div class="aw-swatch" data-color="#4ef0f0" style="background:#4ef0f0"></div>
+                </div>
+              </div>
+              <div class="aw-section">
+                <span class="aw-section-lbl">Background</span>
+                <div class="aw-chips">
+                  <div class="aw-chip active" data-bg="transparent" data-sh="1">None</div>
+                  <div class="aw-chip" data-bg="rgba(0,0,0,0.6)" data-sh="0">Dark</div>
+                  <div class="aw-chip" data-bg="rgba(0,0,0,0.88)" data-sh="0">Black</div>
+                </div>
+              </div>
+              <div class="aw-section">
+                <span class="aw-section-lbl">Weight</span>
+                <div class="aw-chips">
+                  <div class="aw-chip active" data-wt="400">Regular</div>
+                  <div class="aw-chip" data-wt="600">Bold</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <button class="aw-btn" id="awFsBtn" data-tip="Fullscreen">
+            <svg id="awFsIcon" viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="aw-loading" id="awLoading"><div class="spinner"></div><span id="awLoadMsg">Loading...</span></div>
+  <div class="tv-seek-indicator" id="tvSeekIndicator"><svg viewBox="0 0 24 24" fill="currentColor" id="tvSeekIcon"><path d="M8 5v14l11-7z"/></svg><span id="tvSeekLabel">+10s</span></div>
+  <div class="tv-vol-indicator" id="tvVolIndicator"><span id="tvVolLabel">100%</span><div class="tv-vol-bar"><div class="tv-vol-fill" id="tvVolFill" style="height:100%"></div></div></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest/dist/hls.min.js"></script>
+<script>
+const qEl  = document.getElementById("q");
+const main = document.getElementById("main");
+let debounce = null;
+let lastResults = [];
+let currentAnimeData = null;
+let currentEpisodes = [];
+let currentEpId = null;
+let jikanEpisodes = [];
+let playerHls = null;
+let playerCapPoll = null;
+let activeTab = "search";
+
+let dlQueue = [];
+let dlMaxConcurrent = parseInt(localStorage.getItem("dlMaxConcurrent") || "2", 10) || 2;
+let dlActiveCount = 0;
+
+let currentUser = null;
+let auth = null;
+let firestore = null;
+
+const DB_NAME = "anisearch-offline";
+const DB_VER  = 1;
+let db = null;
+
+function openDB() {
+  return new Promise((res, rej) => {
+    if (db) return res(db);
+    const req = indexedDB.open(DB_NAME, DB_VER);
+    req.onupgradeneeded = e => {
+      const d = e.target.result;
+      if (!d.objectStoreNames.contains("segments")) {
+        d.createObjectStore("segments", { keyPath: "key" });
+      }
+      if (!d.objectStoreNames.contains("meta")) {
+        d.createObjectStore("meta", { keyPath: "epId" });
+      }
+    };
+    req.onsuccess = e => { db = e.target.result; res(db); };
+    req.onerror = () => rej(req.error);
+  });
+}
+
+async function dbPut(store, obj) {
+  const d = await openDB();
+  return new Promise((res, rej) => {
+    const tx = d.transaction(store, "readwrite");
+    tx.objectStore(store).put(obj);
+    tx.oncomplete = res;
+    tx.onerror = () => rej(tx.error);
+  });
+}
+
+async function dbGet(store, key) {
+  const d = await openDB();
+  return new Promise((res, rej) => {
+    const tx = d.transaction(store, "readonly");
+    const req = tx.objectStore(store).get(key);
+    req.onsuccess = () => res(req.result);
+    req.onerror = () => rej(req.error);
+  });
+}
+
+async function dbGetAll(store) {
+  const d = await openDB();
+  return new Promise((res, rej) => {
+    const tx = d.transaction(store, "readonly");
+    const req = tx.objectStore(store).getAll();
+    req.onsuccess = () => res(req.result);
+    req.onerror = () => rej(req.error);
+  });
+}
+
+async function dbDelete(store, key) {
+  const d = await openDB();
+  return new Promise((res, rej) => {
+    const tx = d.transaction(store, "readwrite");
+    tx.objectStore(store).delete(key);
+    tx.oncomplete = res;
+    tx.onerror = () => rej(tx.error);
+  });
+}
+
+async function dbDeleteRange(store, keyPrefix) {
+  const d = await openDB();
+  return new Promise((res, rej) => {
+    const tx = d.transaction(store, "readwrite");
+    const idx = tx.objectStore(store);
+    const req = idx.openCursor();
+    req.onsuccess = e => {
+      const cursor = e.target.result;
+      if (!cursor) return;
+      if (cursor.key.startsWith(keyPrefix)) cursor.delete();
+      cursor.continue();
+    };
+    tx.oncomplete = res;
+    tx.onerror = () => rej(tx.error);
+  });
+}
+
+async function getOfflineEpisodeCount() {
+  const all = await dbGetAll("meta");
+  return all.length;
+}
+
+async function updateDlBadge() {
+  const count = await getOfflineEpisodeCount();
+  const badge = document.getElementById("dlBadge");
+  badge.textContent = count;
+  badge.classList.toggle("show", count > 0);
+}
+
+async function isEpisodeSaved(epId) {
+  const meta = await dbGet("meta", epId);
+  return !!meta;
+}
+
+function enqueueDownloadTask(epId, epNum, epTitle, title, slug, poster, category) {
+  const taskId = `${epId}:${category}`;
+  const existing = dlQueue.find(t => t.id === taskId && t.status !== "cancelled" && t.status !== "error" && t.status !== "completed");
+  if (existing) return false;
+  dlQueue.push({
+    id: taskId,
+    epId,
+    epNum,
+    epTitle,
+    title,
+    slug,
+    poster,
+    category,
+    status: "queued",
+    progress: 0,
+    total: 0,
+    sizeMb: 0,
+    controller: null,
+    error: null,
+  });
+  return true;
+}
+
+function initFirebase() {
+  if (!window.firebase) return;
+  if (auth) return;
+  
+  const firebaseConfig = {
+    apiKey: "AIzaSyCXiUjBLH_-tAFKABF1OBa_GCioKU35Uus",
+    authDomain: "anianime-ab07a.firebaseapp.com",
+    projectId: "anianime-ab07a",
+    storageBucket: "anianime-ab07a.firebasestorage.app",
+    messagingSenderId: "504934812282",
+    appId: "1:504934812282:web:4d96f2fbc8614b6ffd49c3",
+    measurementId: "G-Q57P8GZYK6"
+  };
+
+  if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+  }
+
+  try { firebase.analytics(); } catch (e) {}
+  auth = firebase.auth();
+  firestore = firebase.firestore();
+  auth.onAuthStateChanged(user => {
+    currentUser = user;
+    if (!authOperationInProgress) {
+      updateAuthUI();
+    }
+  });
+}
+
+let authOperationInProgress = false;
+
+function updateAuthUI() {
+  if (authOperationInProgress) return;
+  const navUser = document.getElementById("navUser");
+  const navUserName = document.getElementById("navUserName");
+  const openAuthBtn = document.getElementById("openAuthBtn");
+  if (!navUser || !navUserName || !openAuthBtn) return;
+  if (currentUser) {
+    openAuthBtn.style.display = "none";
+    navUser.style.display = "flex";
+    navUserName.textContent = currentUser.displayName || currentUser.email || "Account";
+  } else {
+    openAuthBtn.style.display = "";
+    navUser.style.display = "none";
+    navUserName.textContent = "";
+  }
+}
+
+function openAuthOverlay(mode = "login", promptText) {
+  initFirebase();
+  const overlay = document.getElementById("authOverlay");
+  const loginForm = document.getElementById("authLoginForm");
+  const signupForm = document.getElementById("authSignupForm");
+  const tabLogin = document.getElementById("authTabLogin");
+  const tabSignup = document.getElementById("authTabSignup");
+  const promptEl = document.getElementById("authPromptText");
+  const errorEl = document.getElementById("authError");
+  if (!overlay || !loginForm || !signupForm || !tabLogin || !tabSignup || !promptEl || !errorEl) return;
+  errorEl.textContent = "";
+  if (promptText) promptEl.textContent = promptText;
+  const showLogin = mode === "login";
+  loginForm.style.display = showLogin ? "flex" : "none";
+  signupForm.style.display = showLogin ? "none" : "flex";
+  tabLogin.classList.toggle("active", showLogin);
+  tabSignup.classList.toggle("active", !showLogin);
+  overlay.classList.add("open");
+}
+
+function closeAuthOverlay() {
+  const overlay = document.getElementById("authOverlay");
+  if (overlay) overlay.classList.remove("open");
+}
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/sw.js").catch(() => {});
+}
+
+document.getElementById("tabSearch").addEventListener("click", () => switchTab("search"));
+document.getElementById("tabDownloads").addEventListener("click", () => switchTab("downloads"));
+document.getElementById("openAuthBtn").addEventListener("click", () => openAuthOverlay("login"));
+document.getElementById("navLogoutBtn").addEventListener("click", () => { if (auth) auth.signOut(); });
+document.getElementById("authCloseBtn").addEventListener("click", () => closeAuthOverlay());
+document.getElementById("authTabLogin").addEventListener("click", () => openAuthOverlay("login"));
+document.getElementById("authTabSignup").addEventListener("click", () => openAuthOverlay("signup"));
+
+document.getElementById("authLoginForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  initFirebase();
+  const email = document.getElementById("loginEmail").value.trim();
+  const password = document.getElementById("loginPassword").value;
+  const errorEl = document.getElementById("authError");
+  if (!email || !password) {
+    errorEl.textContent = "Enter your email and password.";
+    return;
+  }
+  try {
+    errorEl.textContent = "Signing in...";
+    const cred = await auth.signInWithEmailAndPassword(email, password);
+    if (!cred.user.emailVerified) {
+      await auth.signOut();
+      errorEl.textContent = "Please verify your email before logging in. Check your inbox.";
+      return;
+    }
+    errorEl.textContent = "";
+    closeAuthOverlay();
+  } catch (err) {
+    errorEl.textContent = err.message || "Failed to sign in.";
+  }
+});
+
+function showVerificationStep(email) {
+  const body = document.querySelector(".auth-body");
+  const tabs = document.querySelector(".auth-tabs");
+  const promptEl = document.getElementById("authPromptText");
+  if (!body || !tabs || !promptEl) return;
+
+  tabs.style.display = "none";
+  promptEl.textContent = "One more step.";
+
+  body.innerHTML = `
+    <div style="text-align:center; padding: 12px 0 8px;">
+      <div style="font-size:36px; margin-bottom:14px;">📬</div>
+      <div style="font-size:14px; font-weight:600; color:var(--text); margin-bottom:8px;">Check your inbox</div>
+      <div style="font-size:12px; color:var(--muted); line-height:1.7; margin-bottom:18px;">
+        We sent a verification link to <strong style="color:var(--text)">${h(email)}</strong>.<br>
+        Click the link in the email to activate your account, then log in.
+      </div>
+      <button class="auth-submit" id="verifyGoToLogin" style="width:100%">Go to log in</button>
+      <div style="margin-top:12px;">
+        <button id="resendVerifyBtn" style="background:none;border:none;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:11px;cursor:pointer;transition:color 0.15s;">Didn't get it? Resend email</button>
+      </div>
+      <div class="auth-error" id="verifyMsg" style="margin-top:8px;"></div>
+    </div>
+  `;
+
+  document.getElementById("verifyGoToLogin").addEventListener("click", () => {
+    closeAuthOverlay();
+    setTimeout(() => openAuthOverlay("login"), 80);
+  });
+
+  document.getElementById("resendVerifyBtn").addEventListener("click", async () => {
+    const msgEl = document.getElementById("verifyMsg");
+    try {
+      initFirebase();
+      const tmpCred = await auth.currentUser;
+      if (tmpCred) {
+        await tmpCred.sendEmailVerification();
+        msgEl.style.color = "var(--dub)";
+        msgEl.textContent = "Verification email resent.";
+      } else {
+        msgEl.style.color = "";
+        msgEl.textContent = "Please try signing up again.";
+      }
+    } catch (err) {
+      msgEl.style.color = "";
+      msgEl.textContent = err.message || "Failed to resend.";
+    }
+  });
+}
+
+document.getElementById("authSignupForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  initFirebase();
+
+  const displayName = document.getElementById("signupDisplayName").value.trim();
+  const username = document.getElementById("signupUsername").value.trim();
+  const email = document.getElementById("signupEmail").value.trim();
+  const password = document.getElementById("signupPassword").value;
+  const confirm = document.getElementById("signupConfirmPassword").value;
+  const errorEl = document.getElementById("authError");
+  const submitBtn = e.target.querySelector(".auth-submit");
+
+  errorEl.style.color = "";
+  errorEl.textContent = "";
+
+  if (!displayName || !username || !email || !password || !confirm) {
+    errorEl.textContent = "Fill in all fields.";
+    return;
+  }
+  if (password !== confirm) {
+    errorEl.textContent = "Passwords do not match.";
+    return;
+  }
+  const passOk = /[A-Z]/.test(password) && /[^A-Za-z0-9]/.test(password) && password.length >= 8;
+  if (!passOk) {
+    errorEl.textContent = "Password must be 8+ chars with 1 uppercase and 1 symbol.";
+    return;
+  }
+
+  submitBtn.disabled = true;
+  errorEl.textContent = "Checking username...";
+
+  let usernameTaken = false;
+  try {
+    const snap = await firestore.collection("users").where("username", "==", username).limit(1).get();
+    usernameTaken = !snap.empty;
+  } catch (err) {
+    errorEl.textContent = "Could not verify username. Try again.";
+    submitBtn.disabled = false;
+    return;
+  }
+
+  if (usernameTaken) {
+    errorEl.textContent = "That username is already taken. Try another.";
+    submitBtn.disabled = false;
+    return;
+  }
+
+  errorEl.textContent = "Creating account...";
+
+  try {
+    const cred = await auth.createUserWithEmailAndPassword(email, password);
+    await cred.user.updateProfile({ displayName });
+
+    firestore.collection("users").doc(cred.user.uid).set({
+      displayName,
+      username,
+      email,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    }).catch(err => console.warn("Firestore write failed:", err.message));
+
+    currentUser = cred.user;
+    errorEl.style.color = "var(--dub)";
+    errorEl.textContent = "Account created!";
+    submitBtn.disabled = false;
+
+    setTimeout(() => {
+      errorEl.style.color = "";
+      errorEl.textContent = "";
+      closeAuthOverlay();
+      updateAuthUI();
+    }, 900);
+  } catch (err) {
+    if (err.code === "auth/email-already-in-use") {
+      errorEl.textContent = "An account with this email already exists. Try logging in.";
+    } else {
+      errorEl.textContent = err.message || "Failed to sign up.";
+    }
+    submitBtn.disabled = false;
+  }
+});
+
+function showOtpStep(email, password, displayName, username) {
+  const body = document.querySelector(".auth-body");
+  const tabs = document.querySelector(".auth-tabs");
+  const promptEl = document.getElementById("authPromptText");
+  if (!body || !tabs || !promptEl) return;
+
+  tabs.style.display = "none";
+  promptEl.textContent = "Check your email.";
+
+  body.innerHTML = `
+    <div style="padding:4px 0 8px;">
+      <div style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.6;">
+        We sent a 6-digit code to <strong style="color:var(--text)">${h(email)}</strong>.<br>
+        Enter it below to activate your account.
+      </div>
+      <form id="otpForm" class="auth-form">
+        <div class="auth-field">
+          <label>Verification code</label>
+          <input type="text" id="otpInput" placeholder="000000" maxlength="6" inputmode="numeric" autocomplete="one-time-code"
+            style="font-size:22px;letter-spacing:0.35em;text-align:center;font-weight:700;">
+        </div>
+        <button type="submit" class="auth-submit" id="otpSubmitBtn">Verify &amp; create account</button>
+      </form>
+      <div class="auth-error" id="otpError" style="margin-top:8px;"></div>
+      <div style="margin-top:14px;display:flex;justify-content:space-between;align-items:center;">
+        <button id="otpBackBtn" style="background:none;border:none;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:11px;cursor:pointer;">← Back</button>
+        <button id="otpResendBtn" style="background:none;border:none;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:11px;cursor:pointer;transition:color 0.15s;">Resend code</button>
+      </div>
+    </div>
+  `;
+
+  document.getElementById("otpInput").focus();
+
+  document.getElementById("otpBackBtn").addEventListener("click", () => {
+    tabs.style.display = "";
+    promptEl.textContent = "Sign in to sync your experience.";
+    closeAuthOverlay();
+    setTimeout(() => openAuthOverlay("signup"), 80);
+  });
+
+  document.getElementById("otpResendBtn").addEventListener("click", async () => {
+    const errEl = document.getElementById("otpError");
+    const btn = document.getElementById("otpResendBtn");
+    btn.disabled = true;
+    btn.textContent = "Sending...";
+    try {
+      const res = await fetch("/api/auth/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, displayName, username, passwordHash: btoa(password) }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        errEl.style.color = "var(--dub)";
+        errEl.textContent = "New code sent! Check your server console for the preview link.";
+        setTimeout(() => { errEl.textContent = ""; errEl.style.color = ""; }, 4000);
+      } else {
+        errEl.style.color = "";
+        errEl.textContent = data.error || "Failed to resend.";
+      }
+    } catch {
+      errEl.style.color = "";
+      errEl.textContent = "Failed to resend.";
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Resend code";
+    }
+  });
+
+  document.getElementById("otpForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const code = document.getElementById("otpInput").value.trim();
+    const errEl = document.getElementById("otpError");
+    const submitBtn = document.getElementById("otpSubmitBtn");
+
+    if (!code || code.length !== 6) {
+      errEl.textContent = "Enter the 6-digit code from your email.";
+      return;
+    }
+
+    submitBtn.disabled = true;
+    errEl.style.color = "";
+    errEl.textContent = "Verifying...";
+
+    try {
+      const verifyRes = await fetch("/api/auth/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, code }),
+      });
+      const verifyData = await verifyRes.json();
+
+      if (!verifyRes.ok || !verifyData.ok) {
+        errEl.textContent = verifyData.error || "Invalid code.";
+        submitBtn.disabled = false;
+        return;
+      }
+
+      errEl.textContent = "Creating account...";
+      const cred = await auth.createUserWithEmailAndPassword(email, password);
+      await cred.user.updateProfile({ displayName });
+      await firestore.collection("users").doc(cred.user.uid).set({
+        displayName,
+        username,
+        email,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+
+      errEl.style.color = "var(--dub)";
+      errEl.textContent = "Account created!";
+      setTimeout(() => closeAuthOverlay(), 800);
+    } catch (err) {
+      errEl.style.color = "";
+      errEl.textContent = err.message || "Failed to create account.";
+      submitBtn.disabled = false;
+    }
+  });
+}
+
+initFirebase();
+
+function switchTab(tab) {
+  activeTab = tab;
+  document.getElementById("tabSearch").classList.toggle("active", tab === "search");
+  document.getElementById("tabDownloads").classList.toggle("active", tab === "downloads");
+  document.getElementById("searchWrap").style.display = tab === "search" ? "" : "none";
+  if (tab === "search") {
+    main.innerHTML = '<div class="state-msg"><div class="icon">🔍</div>Search for any anime above</div>';
+  } else {
+    renderDownloadsPage();
+  }
+}
+
+async function renderDownloadsPage() {
+  main.innerHTML = '<div class="state-msg"><div class="spinner"></div></div>';
+  const allMeta = await dbGetAll("meta");
+
+  const activeTasks = dlQueue.filter(t => t.status !== "completed" && t.status !== "cancelled");
+
+  let html = '<div class="downloads-page">';
+
+  // Download manager header
+  html += `<div class="dl-manager">
+    <div class="dl-manager-top">
+      <div class="dl-manager-title">Download manager</div>
+      <div class="dl-manager-setting">
+        <span>Max active downloads</span>
+        <input type="range" id="dlMaxConcurrentSlider" min="1" max="4" step="1">
+        <span id="dlMaxConcurrentLabel"></span>
+      </div>
+    </div>`;
+
+  if (activeTasks.length) {
+    html += `<div class="dl-queue-list">`;
+    for (const task of activeTasks) {
+      const total = task.total || 0;
+      const done = task.progress || 0;
+      const pct = total ? Math.round((done / total) * 100) : (task.status === "completed" ? 100 : 0);
+      const sizeLabel = task.sizeMb ? `${task.sizeMb.toFixed(1)} MB` : "";
+      const statusLabel =
+        task.status === "queued" ? "Queued" :
+        task.status === "running" ? "Downloading" :
+        task.status === "error" ? (task.error || "Error") :
+        task.status === "cancelled" ? "Cancelled" :
+        "Done";
+      html += `<div class="dl-task" data-task-id="${h(task.id)}">
+        <div class="dl-task-main">
+          <div class="dl-task-title">${h(task.title)} — EP ${task.epNum}</div>
+          <div class="dl-task-meta">${h(statusLabel)}${sizeLabel ? " · " + h(sizeLabel) : ""}</div>
+        </div>
+        <div class="dl-task-progress">
+          <div class="dl-task-bar">
+            <div class="dl-task-bar-fill" style="width:${pct}%;"></div>
+          </div>
+          <div class="dl-task-progress-label">${done} / ${total || "?"}</div>
+        </div>
+        <button class="dl-task-cancel"${task.status === "running" || task.status === "queued" ? "" : " disabled"}>Cancel</button>
+      </div>`;
+    }
+    html += `</div>`;
+  } else {
+    html += `<div class="dl-queue-empty">No active downloads</div>`;
+  }
+
+  html += `</div>`; // end dl-manager
+
+  if (!allMeta.length) {
+    html += `<div class="dl-empty"><div class="icon">📥</div><div class="dl-empty-title">No offline episodes</div><div class="dl-empty-sub">Hit the download button while watching an episode to save it here.</div></div>`;
+    main.innerHTML = html;
+    wireDownloadsPageEvents();
+    return;
+  }
+
+  const byAnime = {};
+  for (const m of allMeta) {
+    const key = m.animeSlug || m.animeTitle;
+    if (!byAnime[key]) byAnime[key] = { title: m.animeTitle, slug: m.animeSlug, poster: m.poster, episodes: [] };
+    byAnime[key].episodes.push(m);
+  }
+  for (const k of Object.keys(byAnime)) {
+    byAnime[k].episodes.sort((a, b) => a.epNum - b.epNum);
+  }
+
+  for (const [key, anime] of Object.entries(byAnime)) {
+    html += `<div class="dl-anime-group" data-slug="${h(key)}">
+      <div class="dl-anime-header">
+        ${anime.poster ? `<img class="dl-anime-poster" src="${h(anime.poster)}" alt="" onerror="this.style.display='none'">` : ''}
+        <div class="dl-anime-info">
+          <div class="dl-anime-title">${h(anime.title)}</div>
+          <div class="dl-anime-count">${anime.episodes.length} episode${anime.episodes.length !== 1 ? 's' : ''} saved</div>
+        </div>
+        <button class="dl-anime-delete-all" data-slug="${h(key)}">Delete all</button>
+      </div>
+      <div class="dl-eps-list">`;
+
+    for (const ep of anime.episodes) {
+      const sizeMb = ep.sizeMb ? ep.sizeMb.toFixed(0) + " MB" : "";
+      const catLabel = ep.category === "dub" ? " · Dub" : " · Sub";
+      html += `<div class="dl-ep-item" data-ep-id="${h(ep.epId)}">
+        <div class="dl-ep-num">${ep.epNum}</div>
+        <div class="dl-ep-info">
+          <div class="dl-ep-title">${h(ep.epTitle || "Episode " + ep.epNum)}</div>
+          <div class="dl-ep-meta">${sizeMb}${catLabel}</div>
+        </div>
+        <button class="dl-ep-play" data-ep-id="${h(ep.epId)}" title="Play offline">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+        </button>
+        <button class="dl-ep-delete" data-ep-id="${h(ep.epId)}" title="Delete">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+        </button>
+      </div>`;
+    }
+    html += `</div></div>`;
+  }
+  html += '</div>';
+  main.innerHTML = html;
+  wireDownloadsPageEvents();
+}
+
+function wireDownloadsPageEvents() {
+  const slider = document.getElementById("dlMaxConcurrentSlider");
+  const label = document.getElementById("dlMaxConcurrentLabel");
+  if (slider && label) {
+    slider.value = String(dlMaxConcurrent);
+    label.textContent = dlMaxConcurrent;
+    slider.oninput = () => {
+      dlMaxConcurrent = Math.max(1, Math.min(4, parseInt(slider.value, 10) || 1));
+      label.textContent = dlMaxConcurrent;
+      try { localStorage.setItem("dlMaxConcurrent", String(dlMaxConcurrent)); } catch {}
+      scheduleDownloads();
+    };
+  }
+
+  main.querySelectorAll(".dl-task-cancel").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const taskEl = btn.closest(".dl-task");
+      if (!taskEl) return;
+      const id = taskEl.getAttribute("data-task-id");
+      const task = dlQueue.find(t => t.id === id);
+      if (!task) return;
+      if (task.controller) {
+        task.controller.abort();
+      }
+      task.status = "cancelled";
+      renderDownloadUI();
+    });
+  });
+
+  main.querySelectorAll(".dl-ep-play").forEach(btn => {
+    btn.addEventListener("click", e => {
+      e.stopPropagation();
+      playOfflineEpisode(btn.getAttribute("data-ep-id"));
+    });
+  });
+
+  main.querySelectorAll(".dl-ep-item").forEach(item => {
+    item.addEventListener("click", e => {
+      if (e.target.closest("button")) return;
+      playOfflineEpisode(item.getAttribute("data-ep-id"));
+    });
+  });
+
+  main.querySelectorAll(".dl-ep-delete").forEach(btn => {
+    btn.addEventListener("click", async e => {
+      e.stopPropagation();
+      const epId = btn.getAttribute("data-ep-id");
+      await deleteOfflineEpisode(epId);
+      renderDownloadsPage();
+      updateDlBadge();
+    });
+  });
+
+  main.querySelectorAll(".dl-anime-delete-all").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const slug = btn.getAttribute("data-slug");
+      const metas = await dbGetAll("meta");
+      const toDelete = metas.filter(m => (m.animeSlug || m.animeTitle) === slug);
+      for (const m of toDelete) await deleteOfflineEpisode(m.epId);
+      renderDownloadsPage();
+      updateDlBadge();
+    });
+  });
+}
+
+function renderDownloadUI() {
+  if (activeTab === "downloads") {
+    renderDownloadsPage();
+  }
+}
+
+function scheduleDownloads() {
+  while (dlActiveCount < dlMaxConcurrent) {
+    const next = dlQueue.find(t => t.status === "queued");
+    if (!next) break;
+    dlActiveCount++;
+    runDownloadTask(next).finally(() => {
+      dlActiveCount--;
+      scheduleDownloads();
+    });
+  }
+}
+
+async function runDownloadTask(task) {
+  if (!task || task.status === "running") return;
+
+  task.status = "running";
+  task.progress = 0;
+  task.total = 0;
+  task.sizeMb = 0;
+  task.error = null;
+
+  const controller = new AbortController();
+  task.controller = controller;
+
+  renderDownloadUI();
+
+  try {
+    const segRes = await fetch(`/api/segments?epId=${encodeURIComponent(task.epId)}&category=${task.category}`, { signal: controller.signal });
+    if (!segRes.ok) {
+      const errJson = await segRes.json().catch(() => ({}));
+      throw new Error(errJson.error || "Failed to get segments");
+    }
+    const { segments, total, durations = [] } = await segRes.json();
+
+    task.total = total || segments.length;
+
+    const segmentBuffers = [];
+    let totalBytes = 0;
+    let done = 0;
+
+    const CONCURRENT = 4;
+    const queue = [...segments];
+    const workers = Array.from({ length: CONCURRENT }, async () => {
+      while (queue.length) {
+        if (controller.signal.aborted) return;
+        const url = queue.shift();
+        const r = await fetch(url, { signal: controller.signal });
+        if (r.ok) {
+          const buf = await r.arrayBuffer();
+          const idx = segments.indexOf(url);
+          segmentBuffers.push({ idx, dur: durations[idx] ?? null, data: buf });
+          totalBytes += buf.byteLength;
+          done++;
+          task.progress = done;
+          task.sizeMb = totalBytes / 1024 / 1024;
+          renderDownloadUI();
+        }
+      }
+    });
+
+    await Promise.all(workers);
+    if (controller.signal.aborted) {
+      task.status = "cancelled";
+      return;
+    }
+
+    segmentBuffers.sort((a, b) => a.idx - b.idx);
+    for (const seg of segmentBuffers) {
+      await dbPut("segments", {
+        key: task.epId + "::" + String(seg.idx).padStart(6, "0"),
+        idx: seg.idx,
+        duration: seg.dur ?? null,
+        data: seg.data,
+      });
+    }
+
+    await dbPut("meta", {
+      epId: task.epId,
+      epNum: task.epNum,
+      epTitle: task.epTitle || "Episode " + task.epNum,
+      animeTitle: task.title,
+      animeSlug: task.slug,
+      poster: task.poster,
+      category: task.category,
+      tracks: [],
+      sizeMb: totalBytes / 1024 / 1024,
+      savedAt: Date.now(),
+    });
+
+    await updateDlBadge();
+    task.status = "completed";
+  } catch (err) {
+    if (controller.signal.aborted) {
+      task.status = "cancelled";
+    } else {
+      task.status = "error";
+      task.error = err.message || "Download failed";
+    }
+  } finally {
+    task.controller = null;
+    renderDownloadUI();
+  }
+}
+
+async function deleteOfflineEpisode(epId) {
+  await dbDeleteRange("segments", epId + "::");
+  await dbDelete("meta", epId);
+}
+
+async function playOfflineEpisode(epId) {
+  const meta = await dbGet("meta", epId);
+  if (!meta) return;
+
+  const allSegs = await dbGetAll("segments");
+  const mySegs = allSegs.filter(s => s.key.startsWith(epId + "::")).sort((a, b) => a.idx - b.idx);
+  if (!mySegs.length) return;
+
+  currentAnimeData = { title: meta.animeTitle, slug: meta.animeSlug, dubCount: 0 };
+  currentEpisodes = [{ epId, num: meta.epNum, title: meta.epTitle || "Episode " + meta.epNum }];
+  currentEpId = epId;
+
+  const overlay = document.getElementById("playerOverlay");
+  const loading = document.getElementById("awLoading");
+  loading.classList.remove("hidden");
+  loading.innerHTML = '<div class="spinner"></div><span>Loading offline episode...</span>';
+  overlay.classList.add("open");
+  document.body.style.overflow = "hidden";
+  document.getElementById("typeToggle").style.display = "none";
+
+  const segBlobUrls = {};
+  mySegs.forEach(seg => {
+    segBlobUrls[seg.idx] = URL.createObjectURL(new Blob([seg.data], { type: "video/MP2T" }));
+  });
+
+  const segDurations = mySegs.map(s => (typeof s.duration === "number" && s.duration > 0 ? s.duration : null));
+  const fallbackDur = segDurations.find(d => d) || 4;
+  const maxDur = segDurations.filter(Boolean).reduce((m, d) => Math.max(m, d), fallbackDur);
+  const targetDuration = Math.ceil(maxDur);
+
+  let m3u8 = "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:" + targetDuration + "\n#EXT-X-MEDIA-SEQUENCE:0\n";
+  mySegs.forEach(seg => {
+    const d = typeof seg.duration === "number" && seg.duration > 0 ? seg.duration : fallbackDur;
+    m3u8 += "#EXTINF:" + d.toFixed(3) + ",\n" + segBlobUrls[seg.idx] + "\n";
+  });
+  m3u8 += "#EXT-X-ENDLIST\n";
+
+  const m3u8Blob = new Blob([m3u8], { type: "application/vnd.apple.mpegurl" });
+  const m3u8Url = URL.createObjectURL(m3u8Blob);
+
+  window._offlineCleanup = () => {
+    URL.revokeObjectURL(m3u8Url);
+    Object.values(segBlobUrls).forEach(u => URL.revokeObjectURL(u));
+    window._offlineCleanup = null;
+  };
+
+  initPlayer(m3u8Url, meta.tracks || [], true);
+}
+
+qEl.addEventListener("keydown", e => { if (e.key === "Enter") { clearTimeout(debounce); runSearch(qEl.value.trim()); } });
+qEl.addEventListener("input", () => {
+  clearTimeout(debounce);
+  const v = qEl.value.trim();
+  if (v.length >= 2) debounce = setTimeout(() => runSearch(v), 500);
+});
+document.getElementById("searchBtn").addEventListener("click", () => { clearTimeout(debounce); runSearch(qEl.value.trim()); });
+
+async function runSearch(q) {
+  if (!q) return;
+  lastResults = [];
+  showSpinner("Searching...");
+  try {
+    const res = await fetch("/api/search?q=" + encodeURIComponent(q));
+    const json = await res.json();
+    if (json.error) { showMsg("⚠️", json.message || "Search failed"); return; }
+    lastResults = json.results;
+    renderGrid(json.results, q);
+  } catch (e) {
+    showMsg("⚠️", "Cannot reach server — run: npm start");
+  }
+}
+
+function renderGrid(results, q) {
+  if (!results.length) {
+    main.innerHTML = '<div class="state-msg"><div class="icon">😶</div>No results for <b>' + h(q) + '</b></div>';
+    return;
+  }
+  let cards = "";
+  for (let i = 0; i < results.length; i++) {
+    const r = results[i];
+    cards += '<div class="result-card" data-i="' + i + '">'
+      + '<div class="card-poster">'
+      + '<img src="' + h(r.img) + '" alt="' + h(r.name) + '" loading="lazy" onerror="this.style.display=\'none\'">'
+      + '<div class="card-badges">'
+      + (r.type ? '<span class="badge-sm badge-type">' + h(r.type) + '</span>' : '')
+      + (r.rating ? '<span class="badge-sm badge-age">' + h(r.rating) + '</span>' : '')
+      + '</div>'
+      + '<div class="card-eps-row">'
+      + (r.sub ? '<span class="ep-tag sub">CC ' + h(r.sub) + '</span>' : '')
+      + (r.dub ? '<span class="ep-tag dub">MIC ' + h(r.dub) + '</span>' : '')
+      + '</div></div>'
+      + '<div class="card-body"><div class="card-title">' + h(r.name) + '</div>'
+      + (r.duration ? '<div class="card-dur">' + h(r.duration) + '</div>' : '')
+      + '</div></div>';
+  }
+  main.innerHTML = '<div class="section-label">' + results.length + ' results for "' + h(q) + '"</div>'
+    + '<div class="results-grid" id="grid">' + cards + '</div>';
+  main.querySelectorAll(".result-card").forEach(card => {
+    card.addEventListener("click", () => openDetailOverlay(lastResults[parseInt(card.getAttribute("data-i"))].slug));
+  });
+}
+
+async function openDetailOverlay(slug) {
+  const overlay = document.getElementById("detailOverlay");
+  const left = document.getElementById("detailLeft");
+  const bg = document.getElementById("detailBg");
+  currentAnimeData = null; currentEpisodes = []; currentEpId = null; jikanEpisodes = [];
+  bg.style.backgroundImage = "";
+  left.innerHTML = '<div class="detail-loading-wrap"><div class="spinner"></div>Loading...</div>';
+  overlay.classList.add("open");
+  document.body.style.overflow = "hidden";
+  try {
+    const res = await fetch("/api/detail?slug=" + encodeURIComponent(slug));
+    const a = await res.json();
+    if (a.error) { left.innerHTML = '<div class="detail-err">' + h(a.message) + '</div>'; return; }
+    currentAnimeData = a;
+    currentEpisodes = a.episodes || [];
+    renderDetailOverlay(a, bg, left);
+    fetchJikanEpisodes(a.title);
+  } catch (e) {
+    left.innerHTML = '<div class="detail-err">Failed to load anime details</div>';
+  }
+}
+
+async function fetchJikanEpisodes(title) {
+  try {
+    const sr = await fetch("https://api.jikan.moe/v4/anime?q=" + encodeURIComponent(title) + "&limit=1");
+    const sj = await sr.json();
+    const mal = sj.data?.[0];
+    if (!mal) return;
+    let allEps = [], page = 1;
+    while (true) {
+      const er = await fetch("https://api.jikan.moe/v4/anime/" + mal.mal_id + "/episodes?page=" + page);
+      const ej = await er.json();
+      if (!ej.data?.length) break;
+      allEps = allEps.concat(ej.data);
+      if (!ej.pagination?.has_next_page) break;
+      page++;
+      await new Promise(r => setTimeout(r, 350));
+    }
+    jikanEpisodes = allEps;
+  } catch (e) {}
+}
+
+function renderDetailOverlay(a, bg, left) {
+  if (a.poster) bg.style.backgroundImage = "url('" + a.poster + "')";
+  const genres = (a.genres || []).map(g => '<span class="genre-tag">' + h(g) + '</span>').join("") || (a.animeType ? '<span class="genre-tag">' + h(a.animeType) + '</span>' : '');
+  const paras = (a.description || "No description available.").split(/\n\n+/).filter(p => p.trim()).map(p => "<p>" + h(p.trim()) + "</p>").join("");
+  left.innerHTML = `
+    <div class="detail-anime-title">${h(a.title || "Unknown")}</div>
+    <div class="detail-meta-row">
+      ${a.rating ? `<span class="meta-pill rating">${h(a.rating)}</span>` : ''}
+      ${a.animeType ? `<span class="meta-pill type">${h(a.animeType)}</span>` : ''}
+      ${a.studio ? `<span class="meta-pill country">${h(a.studio)}</span>` : ''}
+      ${a.duration ? `<span class="meta-pill year">⏱ ${h(a.duration)}</span>` : ''}
+    </div>
+    ${genres ? `<div class="detail-genres">${genres}</div>` : ''}
+    <div class="detail-ep-counts">
+      ${a.subCount ? `<div class="ep-pill s"><span class="n">${h(a.subCount)}</span><span class="l">SUB<br>EPS</span></div>` : ''}
+      ${a.dubCount ? `<div class="ep-pill d"><span class="n">${h(a.dubCount)}</span><span class="l">DUB<br>EPS</span></div>` : ''}
+    </div>
+    <div class="detail-description" id="overlayDesc">${paras}</div>
+    <button class="read-more-btn" id="overlayReadMore">Read more ↓</button>
+    <div class="detail-actions">
+      <button class="btn-play" id="detailPlayBtn">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Play
+      </button>
+      <button class="btn-play btn-secondary" id="detailBatchDlBtn">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>Download range
+      </button>
+      <button class="btn-action" title="Like"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg></button>
+      <button class="btn-action" title="Add to list"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+    </div>`;
+  const desc = left.querySelector("#overlayDesc");
+  const rmBtn = left.querySelector("#overlayReadMore");
+  rmBtn.addEventListener("click", () => { const exp = desc.classList.toggle("expanded"); rmBtn.textContent = exp ? "Read less ↑" : "Read more ↓"; });
+  left.querySelector("#detailPlayBtn").addEventListener("click", () => {
+    if (!currentEpisodes.length) return;
+    if (!currentUser) {
+      openAuthOverlay("signup", "Log in or create an account to play episodes.");
+      return;
+    }
+    const ep1 = currentEpisodes.reduce((min, ep) => ep.num < min.num ? ep : min, currentEpisodes[0]);
+    currentEpId = ep1.epId;
+    openPlayer(ep1.epId, "sub");
+  });
+  const batchBtn = left.querySelector("#detailBatchDlBtn");
+  if (batchBtn) {
+    batchBtn.addEventListener("click", () => {
+      if (!currentUser) {
+        openAuthOverlay("signup", "Log in or create an account to download episodes.");
+        return;
+      }
+      openBatchDlOverlay();
+    });
+  }
+  left.querySelectorAll(".btn-action").forEach(btn => {
+    btn.addEventListener("click", e => {
+      e.preventDefault();
+      if (!currentUser) {
+        openAuthOverlay("signup", "Please sign up or log in to use this feature.");
+      }
+    });
+  });
+}
+
+document.getElementById("detailCloseBtn").addEventListener("click", () => {
+  document.getElementById("detailOverlay").classList.remove("open");
+  document.body.style.overflow = "";
+});
+
+function openPlayer(epId, category) {
+  const overlay = document.getElementById("playerOverlay");
+  const loading = document.getElementById("awLoading");
+  currentEpId = epId;
+  loading.classList.remove("hidden");
+  loading.innerHTML = '<div class="spinner"></div><span>Fetching sources...</span>';
+  overlay.classList.add("open");
+  document.body.style.overflow = "hidden";
+  const togSub = document.querySelector(".tog-sub");
+  const togDub = document.querySelector(".tog-dub");
+  const typeToggle = document.getElementById("typeToggle");
+  if (currentAnimeData?.dubCount > 0) {
+    typeToggle.style.display = "flex";
+    if (category === "dub") { togDub.classList.add("active"); togSub.classList.remove("active"); }
+    else { togSub.classList.add("active"); togDub.classList.remove("active"); }
+  } else {
+    typeToggle.style.display = "none";
+  }
+  loadSources(epId, category);
+  buildEpsList();
+}
+
+async function loadSources(epId, category, epNum) {
+  const loading = document.getElementById("awLoading");
+  try {
+    const title = currentAnimeData?.title || "";
+    const num = epNum || currentEpisodes.find(e => e.epId === epId)?.num || 1;
+    const res = await fetch(`/api/sources?epId=${encodeURIComponent(epId)}&category=${category}&title=${encodeURIComponent(title)}&epNum=${num}`);
+    const data = await res.json();
+    if (!res.ok || !data.source) throw new Error(data.error || "No source returned");
+    initPlayer(data.source, data.tracks || []);
+  } catch (err) {
+    loading.innerHTML = `<div class="aw-err">⚠ ${h(err.message)}</div>`;
+  }
+}
+
+function buildEpsList() {
+  const list = document.getElementById("awEpsList");
+  const countEl = document.getElementById("awEpsPanelCount");
+  if (!currentEpisodes.length) { list.innerHTML = '<div class="ep-list-loading">No episodes found</div>'; return; }
+  countEl.textContent = currentEpisodes.length + " eps";
+  list.innerHTML = currentEpisodes.map((ep, i) => {
+    const jikanEp = jikanEpisodes.find(j => j.mal_id === ep.num) || jikanEpisodes[i] || null;
+    const thumb = jikanEp?.images?.jpg?.image_url || "";
+    const desc = jikanEp?.synopsis || "";
+    const displayTitle = ep.title.replace(/^Episode \d+:\s*/, "") || "Episode " + ep.num;
+    const active = ep.epId === currentEpId ? " active" : "";
+    return `<div class="ep-list-item${active}" data-ep-id="${h(ep.epId)}" data-ep-num="${ep.num}">
+      <div class="ep-thumb-wrap">${thumb ? `<img src="${h(thumb)}" alt="" loading="lazy" onerror="this.style.display='none'">` : ''}<span class="ep-thumb-num">${ep.num}</span></div>
+      <div class="ep-list-info"><div class="ep-list-title">${h(displayTitle)}</div>${desc ? `<div class="ep-list-desc">${h(desc)}</div>` : ''}</div>
+    </div>`;
+  }).join("");
+  list.querySelectorAll(".ep-list-item").forEach(item => {
+    item.addEventListener("click", () => {
+      const epId = item.getAttribute("data-ep-id");
+      const category = document.querySelector(".tog-dub.active") ? "dub" : "sub";
+      currentEpId = epId;
+      list.querySelectorAll(".ep-list-item").forEach(el => el.classList.remove("active"));
+      item.classList.add("active");
+      closeAllPanels();
+      const loading = document.getElementById("awLoading");
+      loading.classList.remove("hidden");
+      loading.innerHTML = '<div class="spinner"></div><span>Loading episode...</span>';
+      loadSources(epId, category, item.getAttribute("data-ep-num"));
+    });
+  });
+  const activeItem = list.querySelector(".ep-list-item.active");
+  if (activeItem) setTimeout(() => activeItem.scrollIntoView({ block: "nearest" }), 100);
+}
+
+async function startOfflineDownload() {
+  if (!currentEpId) return;
+  const epObj = currentEpisodes.find(e => e.epId === currentEpId);
+  const epNum = epObj?.num || 1;
+  const epTitle = epObj?.title || "Episode " + epNum;
+  const title = currentAnimeData?.title || "Unknown";
+  const slug = currentAnimeData?.slug || title;
+  const poster = currentAnimeData?.poster || "";
+  const category = document.querySelector(".tog-dub.active") ? "dub" : "sub";
+
+  const alreadySaved = await isEpisodeSaved(currentEpId);
+  if (alreadySaved) {
+    const toast = document.getElementById("awDlToast");
+    document.getElementById("awDlLabel").textContent = "Already saved offline";
+    document.getElementById("awDlPct").textContent = "✓";
+    document.getElementById("awDlFill").style.width = "100%";
+    document.getElementById("awDlSub").textContent = "Open Downloads tab to watch";
+    toast.classList.add("show");
+    setTimeout(() => toast.classList.remove("show"), 2800);
+    return;
+  }
+
+  enqueueDownloadTask(currentEpId, epNum, epTitle, title, slug, poster, category);
+
+  const toast = document.getElementById("awDlToast");
+  document.getElementById("awDlLabel").textContent = `${title} — EP ${epNum}`;
+  document.getElementById("awDlPct").textContent = "";
+  document.getElementById("awDlFill").style.width = "0%";
+  document.getElementById("awDlSub").textContent = "Added to download queue";
+  toast.classList.add("show");
+  setTimeout(() => toast.classList.remove("show"), 2200);
+
+  scheduleDownloads();
+  renderDownloadUI();
+}
+
+function initPlayer(url, tracks, isOffline = false) {
+  const vid      = document.getElementById("awVid");
+  const loading  = document.getElementById("awLoading");
+  const spinner  = document.getElementById("awSpinnerEl");
+  const pulse    = document.getElementById("awPulseEl");
+  const caps     = document.getElementById("awCaptions");
+  const ctrl     = document.getElementById("awControls");
+  const playBtn  = document.getElementById("awPlayBtn");
+  const playIco  = document.getElementById("awPlayIcon");
+  const muteBtn  = document.getElementById("awMuteBtn");
+  const volIco   = document.getElementById("awVolIcon");
+  const volSlid  = document.getElementById("awVolSlider");
+  const subBtn   = document.getElementById("awSubBtn");
+  const subPanel = document.getElementById("awSubPanel");
+  const epsBtn   = document.getElementById("awEpsBtn");
+  const epsPanel = document.getElementById("awEpsPanel");
+  const setBtn   = document.getElementById("awSettingsBtn");
+  const setPanel = document.getElementById("awSettingsPanel");
+  const fsBtn    = document.getElementById("awFsBtn");
+  const fsIco    = document.getElementById("awFsIcon");
+  const track    = document.getElementById("awTrack");
+  const fill     = document.getElementById("awFill");
+  const buffered = document.getElementById("awBuffered");
+  const thumb    = document.getElementById("awThumb");
+  const timeEl   = document.getElementById("awTime");
+  const dlBtn    = document.getElementById("awDlBtn");
+  const playerWrap = document.getElementById("playerOverlay");
+
+  const capSettings = { size: 16, offset: 26, color: '#fff', bg: 'transparent', shadow: true, weight: 400 };
+  const SHADOW_ON = '0 1px 4px rgba(0,0,0,0.95), 0 0 20px rgba(0,0,0,0.7)';
+  function applyCap() {
+    caps.style.fontSize = capSettings.size + 'px'; caps.style.color = capSettings.color;
+    caps.style.background = capSettings.bg; caps.style.textShadow = capSettings.shadow ? SHADOW_ON : 'none';
+    caps.style.bottom = capSettings.offset + 'px'; caps.style.fontWeight = capSettings.weight;
+    playerWrap.style.setProperty('--cap-up', (capSettings.offset + 70) + 'px');
+  }
+  applyCap();
+
+  document.getElementById("awSizeSlider").oninput = function() { capSettings.size = +this.value; document.getElementById("awSizeVal").textContent = capSettings.size + 'px'; applyCap(); };
+  document.getElementById("awOffsetSlider").oninput = function() { capSettings.offset = +this.value; document.getElementById("awOffsetVal").textContent = capSettings.offset + 'px'; applyCap(); };
+  document.querySelectorAll('.aw-swatch').forEach(sw => { sw.onclick = e => { e.stopPropagation(); document.querySelectorAll('.aw-swatch').forEach(s => s.classList.remove('active')); sw.classList.add('active'); capSettings.color = sw.dataset.color; applyCap(); }; });
+  document.querySelectorAll('[data-bg]').forEach(chip => { chip.onclick = e => { e.stopPropagation(); document.querySelectorAll('[data-bg]').forEach(c => c.classList.remove('active')); chip.classList.add('active'); capSettings.bg = chip.dataset.bg; capSettings.shadow = chip.dataset.sh === '1'; applyCap(); }; });
+  document.querySelectorAll('[data-wt]').forEach(chip => { chip.onclick = e => { e.stopPropagation(); document.querySelectorAll('[data-wt]').forEach(c => c.classList.remove('active')); chip.classList.add('active'); capSettings.weight = +chip.dataset.wt; applyCap(); }; });
+
+  const ICONS = {
+    play: `<path d="M8 5v14l11-7z"/>`, pause: `<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>`,
+    volOn: `<path d="M3 9v6h4l5 5V4L7 9H3z"/><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/><path d="M14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>`,
+    volMute: `<path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>`,
+    fsEnter: `<path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>`,
+    fsExit: `<path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/>`,
+  };
+  function setIco(el, svg) { el.innerHTML = svg; }
+  function fmt(s) { if (!isFinite(s) || isNaN(s)) return '0:00'; const m = Math.floor(s / 60), sec = Math.floor(s % 60); return `${m}:${sec.toString().padStart(2, '0')}`; }
+
+  if (playerHls) { playerHls.destroy(); playerHls = null; }
+  if (playerCapPoll) { clearInterval(playerCapPoll); playerCapPoll = null; }
+  vid.querySelectorAll('track').forEach(t => t.remove());
+
+  if (Hls.isSupported()) {
+    const hlsConfig = isOffline ? { enableWorker: false, xhrSetup: null } : { enableWorker: true };
+    const hlsInst = new Hls(hlsConfig);
+    hlsInst.loadSource(url);
+    hlsInst.attachMedia(vid);
+    hlsInst.on(Hls.Events.MANIFEST_PARSED, () => { loading.classList.add('hidden'); vid.play().catch(() => {}); });
+    hlsInst.on(Hls.Events.ERROR, (_, d) => {
+      if (d.fatal) {
+        const msg = isOffline ? "Could not play offline video — try re-downloading" : "Stream error: " + d.details;
+        loading.classList.remove('hidden');
+        loading.innerHTML = `<div class="aw-err">⚠ ${msg}</div>`;
+      }
+    });
+    playerHls = hlsInst;
+  } else if (vid.canPlayType('application/vnd.apple.mpegurl')) {
+    vid.src = url;
+    vid.addEventListener('loadedmetadata', () => { loading.classList.add('hidden'); vid.play().catch(() => {}); }, { once: true });
+    vid.addEventListener('error', () => { loading.innerHTML = '<div class="aw-err">⚠ Could not play video</div>'; }, { once: true });
+  } else {
+    loading.innerHTML = '<div class="aw-err">⚠ HLS not supported in this browser</div>'; return;
+  }
+
+  tracks.forEach((t, i) => {
+    const el = document.createElement('track');
+    el.kind = 'subtitles'; el.label = t.label || `Track ${i + 1}`; el.srclang = t.lang || ''; el.src = t.file;
+    vid.appendChild(el);
+  });
+
+  subPanel.innerHTML = '<div class="aw-panel-hdr">Subtitles</div>';
+  const makeSubOpt = (label, idx, sel) => {
+    const el = document.createElement('div');
+    el.className = 'aw-sub-opt' + (sel ? ' selected' : '');
+    el.dataset.track = idx;
+    el.innerHTML = `<svg class="ck" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>${label}`;
+    el.addEventListener('click', () => selectSub(idx));
+    return el;
+  };
+  subPanel.appendChild(makeSubOpt('Off', -1, true));
+  tracks.forEach((t, i) => subPanel.appendChild(makeSubOpt(t.label || `Track ${i + 1}`, i, false)));
+
+  function selectSub(idx) {
+    subPanel.querySelectorAll('.aw-sub-opt').forEach(o => o.classList.toggle('selected', +o.dataset.track === idx));
+    for (let i = 0; i < vid.textTracks.length; i++) vid.textTracks[i].mode = i === idx ? 'hidden' : 'disabled';
+    subBtn.classList.toggle('active', idx >= 0);
+    closeAllPanels();
+  }
+
+  setTimeout(() => {
+    for (let i = 0; i < vid.textTracks.length; i++) vid.textTracks[i].mode = 'disabled';
+    playerCapPoll = setInterval(() => {
+      let text = '';
+      for (let i = 0; i < vid.textTracks.length; i++) {
+        const t = vid.textTracks[i];
+        if (t.mode === 'hidden' && t.activeCues?.length) { text = Array.from(t.activeCues).map(c => c.text.replace(/<[^>]+>/g, '')).join('\n'); break; }
+      }
+      caps.textContent = text; caps.style.opacity = text ? '1' : '0';
+    }, 80);
+  }, 250);
+
+  let hideTimer = null, seeking = false;
+  function showCtrl() {
+    ctrl.classList.remove('hidden'); caps.classList.add('up'); clearTimeout(hideTimer);
+    const anyPanel = subPanel.classList.contains('open') || setPanel.classList.contains('open') || epsPanel.classList.contains('open');
+    if (!vid.paused && !anyPanel) hideTimer = setTimeout(() => { ctrl.classList.add('hidden'); caps.classList.remove('up'); }, 3000);
+  }
+  playerWrap.onmousemove = showCtrl; playerWrap.ontouchstart = showCtrl; window._awShowCtrl = showCtrl;
+
+  function togglePlay() { vid.paused ? vid.play() : vid.pause(); triggerPulse(!vid.paused); }
+  function triggerPulse(willPause) {
+    pulse.querySelector('svg').innerHTML = willPause ? ICONS.pause : ICONS.play;
+    pulse.classList.remove('flash'); void pulse.offsetWidth; pulse.classList.add('flash');
+  }
+  vid.onplay = () => { setIco(playIco, ICONS.pause); playBtn.setAttribute('data-tip', 'Pause'); showCtrl(); };
+  vid.onpause = () => { setIco(playIco, ICONS.play); playBtn.setAttribute('data-tip', 'Play'); ctrl.classList.remove('hidden'); caps.classList.add('up'); clearTimeout(hideTimer); };
+
+  vid.ontimeupdate = () => {
+    if (seeking || !vid.duration) return;
+    const pct = (vid.currentTime / vid.duration) * 100;
+    fill.style.width = pct + '%'; thumb.style.left = pct + '%';
+    timeEl.textContent = fmt(vid.currentTime) + ' / ' + fmt(vid.duration);
+    if (vid.buffered.length) buffered.style.width = (vid.buffered.end(vid.buffered.length - 1) / vid.duration * 100) + '%';
+  };
+
+  function seekTo(e) {
+    const r = track.getBoundingClientRect();
+    const pct = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
+    vid.currentTime = pct * vid.duration; fill.style.width = (pct * 100) + '%'; thumb.style.left = (pct * 100) + '%';
+  }
+  track.onmousedown = e => {
+    seeking = true; seekTo(e);
+    const mv = e2 => seekTo(e2);
+    const up = () => { seeking = false; document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up); };
+    document.addEventListener('mousemove', mv); document.addEventListener('mouseup', up);
+  };
+
+  vid.onwaiting = () => spinner.classList.add('visible');
+  vid.oncanplay = () => spinner.classList.remove('visible');
+  vid.onplaying = () => spinner.classList.remove('visible');
+
+  function updateVol() { setIco(volIco, vid.muted || vid.volume === 0 ? ICONS.volMute : ICONS.volOn); }
+  function updateVolFill() { volSlid.style.backgroundSize = (vid.muted ? 0 : vid.volume * 100) + '% 100%'; }
+  volSlid.oninput = () => { vid.volume = +volSlid.value; vid.muted = vid.volume === 0; updateVol(); updateVolFill(); };
+  muteBtn.onclick = () => { vid.muted = !vid.muted; updateVol(); updateVolFill(); };
+  updateVolFill();
+
+  function closeAllPanels() {
+    subPanel.classList.remove('open'); setPanel.classList.remove('open'); epsPanel.classList.remove('open');
+    subBtn.classList.remove('active'); setBtn.classList.remove('active'); epsBtn.classList.remove('active');
+    showCtrl();
+  }
+  window.closeAllPanels = closeAllPanels;
+
+  dlBtn.onclick = e => { e.stopPropagation(); closeAllPanels(); startOfflineDownload(); };
+  playBtn.onclick = e => { e.stopPropagation(); togglePlay(); };
+  muteBtn.onclick = e => { e.stopPropagation(); vid.muted = !vid.muted; updateVol(); updateVolFill(); };
+
+  subBtn.onclick = e => { e.stopPropagation(); const o = !subPanel.classList.contains('open'); closeAllPanels(); if (o) { subPanel.classList.add('open'); subBtn.classList.add('active'); clearTimeout(hideTimer); } };
+  setBtn.onclick = e => { e.stopPropagation(); const o = !setPanel.classList.contains('open'); closeAllPanels(); if (o) { setPanel.classList.add('open'); setBtn.classList.add('active'); clearTimeout(hideTimer); } };
+  epsBtn.onclick = e => { e.stopPropagation(); const o = !epsPanel.classList.contains('open'); closeAllPanels(); if (o) { epsPanel.classList.add('open'); epsBtn.classList.add('active'); clearTimeout(hideTimer); buildEpsList(); } };
+
+  subPanel.onclick = e => e.stopPropagation();
+  setPanel.onclick = e => e.stopPropagation();
+  epsPanel.onclick = e => e.stopPropagation();
+  playerWrap.onclick = e => {
+    const anyPanel = subPanel.classList.contains('open') || setPanel.classList.contains('open') || epsPanel.classList.contains('open');
+    if (anyPanel) { closeAllPanels(); return; }
+    if (e.target === vid || e.target === playerWrap) togglePlay();
+  };
+
+  fsBtn.onclick = e => {
+    e.stopPropagation();
+    if (!document.fullscreenElement) (playerWrap.requestFullscreen || playerWrap.webkitRequestFullscreen).call(playerWrap);
+    else (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+  };
+  document.addEventListener('fullscreenchange', () => {
+    const inFs = !!document.fullscreenElement;
+    setIco(fsIco, inFs ? ICONS.fsExit : ICONS.fsEnter);
+    fsBtn.setAttribute('data-tip', inFs ? 'Exit Fullscreen' : 'Fullscreen');
+  });
+
+  document.addEventListener('keydown', e => {
+    if (!document.getElementById('playerOverlay').classList.contains('open')) return;
+    if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
+    if (e.code === 'ArrowRight') { vid.currentTime += 5; showCtrl(); }
+    if (e.code === 'ArrowLeft') { vid.currentTime -= 5; showCtrl(); }
+    if (e.code === 'KeyM') { vid.muted = !vid.muted; updateVol(); }
+    if (e.code === 'KeyF') fsBtn.onclick({stopPropagation:()=>{}});
+    if (e.code === 'Escape') document.getElementById('playerBackBtn').click();
+  });
+
+  showCtrl();
+}
+
+document.getElementById("playerBackBtn").addEventListener("click", () => {
+  document.getElementById("awDlToast").classList.remove("show");
+  if (playerHls) { playerHls.destroy(); playerHls = null; }
+  if (playerCapPoll) { clearInterval(playerCapPoll); playerCapPoll = null; }
+  if (window._offlineCleanup) window._offlineCleanup();
+  const vid = document.getElementById("awVid");
+  vid.pause();
+  vid.src = "";
+  document.getElementById("playerOverlay").classList.remove("open");
+  document.body.style.overflow = "";
+});
+
+document.getElementById("awDlCancel").addEventListener("click", () => {
+  document.getElementById("awDlToast").classList.remove("show");
+});
+
+function openBatchDlOverlay() {
+  if (!currentEpisodes.length) return;
+  const total = currentEpisodes.length;
+  const overlay = document.getElementById("batchDlOverlay");
+  const titleEl = document.getElementById("batchDlTitle");
+  const subtitleEl = document.getElementById("batchDlSubtitle");
+  const from = document.getElementById("batchDlFrom");
+  const to = document.getElementById("batchDlTo");
+  const fromLabel = document.getElementById("batchDlFromLabel");
+  const toLabel = document.getElementById("batchDlToLabel");
+  const summary = document.getElementById("batchDlSummary");
+  const trackFill = document.getElementById("batchDlTrackFill");
+  if (!overlay || !from || !to || !fromLabel || !toLabel || !summary || !trackFill) return;
+
+  if (titleEl) titleEl.textContent = "Download episodes";
+  if (subtitleEl) {
+    const name = currentAnimeData?.title || "this anime";
+    subtitleEl.textContent = `Select a range of episodes from ${name} to save offline.`;
+  }
+
+  from.min = "1";
+  from.max = String(total);
+  to.min = "1";
+  to.max = String(total);
+  from.value = "1";
+  to.value = String(total);
+
+  updateBatchDlUI();
+
+  overlay.classList.add("open");
+}
+
+function closeBatchDlOverlay() {
+  const overlay = document.getElementById("batchDlOverlay");
+  if (overlay) overlay.classList.remove("open");
+}
+
+function updateBatchDlUI() {
+  const total = currentEpisodes.length || 1;
+  const from = document.getElementById("batchDlFrom");
+  const to = document.getElementById("batchDlTo");
+  const fromLabel = document.getElementById("batchDlFromLabel");
+  const toLabel = document.getElementById("batchDlToLabel");
+  const summary = document.getElementById("batchDlSummary");
+  const trackFill = document.getElementById("batchDlTrackFill");
+  if (!from || !to || !fromLabel || !toLabel || !summary || !trackFill) return;
+
+  let a = parseInt(from.value, 10) || 1;
+  let b = parseInt(to.value, 10) || total;
+  if (a < 1) a = 1;
+  if (b < 1) b = 1;
+  if (a > total) a = total;
+  if (b > total) b = total;
+  if (a > b) {
+    const mid = a;
+    a = b;
+    b = mid;
+  }
+  from.value = String(a);
+  to.value = String(b);
+
+  fromLabel.textContent = String(a);
+  toLabel.textContent = String(b);
+  summary.textContent = `Episodes ${a}–${b} of ${total}`;
+
+  const startPct = ((a - 1) / Math.max(1, total - 1)) * 100;
+  const endPct = ((b - 1) / Math.max(1, total - 1)) * 100;
+  trackFill.style.left = `${Math.min(startPct, endPct)}%`;
+  trackFill.style.right = `${100 - Math.max(startPct, endPct)}%`;
+}
+
+document.getElementById("batchDlFrom").addEventListener("input", () => updateBatchDlUI());
+document.getElementById("batchDlTo").addEventListener("input", () => updateBatchDlUI());
+document.getElementById("batchDlCloseBtn").addEventListener("click", () => closeBatchDlOverlay());
+document.getElementById("batchDlCancelBtn").addEventListener("click", () => closeBatchDlOverlay());
+document.getElementById("batchDlConfirmBtn").addEventListener("click", () => {
+  if (!currentEpisodes.length) { closeBatchDlOverlay(); return; }
+  const from = parseInt(document.getElementById("batchDlFrom").value, 10) || 1;
+  const to = parseInt(document.getElementById("batchDlTo").value, 10) || currentEpisodes.length;
+  const start = Math.max(1, Math.min(from, to));
+  const end = Math.min(currentEpisodes.length, Math.max(from, to));
+
+  const title = currentAnimeData?.title || "Unknown";
+  const slug = currentAnimeData?.slug || title;
+  const poster = currentAnimeData?.poster || "";
+  const category = document.querySelector(".tog-dub.active") ? "dub" : "sub";
+
+  for (let num = start; num <= end; num++) {
+    const epObj = currentEpisodes.find(e => e.num === num);
+    if (!epObj) continue;
+    enqueueDownloadTask(epObj.epId, epObj.num, epObj.title || "Episode " + epObj.num, title, slug, poster, category);
+  }
+
+  scheduleDownloads();
+  renderDownloadUI();
+  closeBatchDlOverlay();
+});
+
+document.querySelector(".tog-sub").addEventListener("click", () => { document.querySelector(".tog-sub").classList.add("active"); document.querySelector(".tog-dub").classList.remove("active"); if (currentEpId) loadSources(currentEpId, "sub"); });
+document.querySelector(".tog-dub").addEventListener("click", () => { document.querySelector(".tog-dub").classList.add("active"); document.querySelector(".tog-sub").classList.remove("active"); if (currentEpId) loadSources(currentEpId, "dub"); });
+document.getElementById("awLoading").addEventListener("click", e => e.stopPropagation());
+
+function showSpinner(msg) { main.innerHTML = '<div class="state-msg"><div class="spinner"></div>' + msg + '</div>'; }
+function showMsg(icon, msg) { main.innerHTML = '<div class="state-msg"><div class="icon">' + icon + '</div>' + h(msg) + '</div>'; }
+function h(s) { return String(s == null ? "" : s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+
+updateDlBadge();
+
+(function() {
+  const KEY = { UP:[38],DOWN:[40],LEFT:[37],RIGHT:[39],ENTER:[13],BACK:[10009,8,461,10182],PLAY_PAUSE:[415,19,179],FF:[417],RW:[412] };
+  function matchKey(e, g) { return g.includes(e.keyCode); }
+  let tvFocusEl = null;
+  function setFocus(el) { if (!el) return; if (tvFocusEl) tvFocusEl.classList.remove('tv-focus'); tvFocusEl = el; tvFocusEl.classList.add('tv-focus'); tvFocusEl.scrollIntoView({block:'nearest',behavior:'smooth'}); }
+  function clearFocus() { if (tvFocusEl) tvFocusEl.classList.remove('tv-focus'); tvFocusEl = null; }
+  function getFocusables(scope) { return Array.from((scope||document).querySelectorAll('.result-card,.btn-play,.btn-action,.detail-close-btn,.ep-list-item,.aw-btn,.tog-btn,.player-back-btn,.search-input,#searchBtn,.dl-ep-play,.dl-ep-delete')).filter(el=>{const r=el.getBoundingClientRect();return r.width>0&&r.height>0;}); }
+  function nearest(els, cur, dir) {
+    if (!els.length) return null; if (!cur) return els[0];
+    const cr=cur.getBoundingClientRect(),cx=cr.left+cr.width/2,cy=cr.top+cr.height/2;
+    let best=null,bestScore=Infinity;
+    for (const el of els) { if (el===cur) continue; const r=el.getBoundingClientRect(),ex=r.left+r.width/2,ey=r.top+r.height/2,dx=ex-cx,dy=ey-cy; let inDir=false; if(dir==='up'&&dy<-8)inDir=true; if(dir==='down'&&dy>8)inDir=true; if(dir==='left'&&dx<-8)inDir=true; if(dir==='right'&&dx>8)inDir=true; if(!inDir)continue; const primary=dir==='up'||dir==='down'?Math.abs(dy):Math.abs(dx),secondary=dir==='up'||dir==='down'?Math.abs(dx):Math.abs(dy),score=primary+secondary*0.3; if(score<bestScore){bestScore=score;best=el;} }
+    return best;
+  }
+  let seekHideTimer=null, volHideTimer=null;
+  function showSeek(secs) { const ind=document.getElementById('tvSeekIndicator'),lbl=document.getElementById('tvSeekLabel'),ico=document.getElementById('tvSeekIcon'),fwd=secs>0; lbl.textContent=(fwd?'+':'')+secs+'s'; ico.innerHTML=fwd?'<path d="M18 9v6l-5.1-3 5.1-3zm-5.4 0v6L7.5 12l5.1-3zM6 9h2v6H6z"/>':'<path d="M6 9v6l5.1-3L6 9zm5.4 0v6l5.1-3-5.1-3zM18 9h-2v6h2z"/>'; ind.classList.add('show'); clearTimeout(seekHideTimer); seekHideTimer=setTimeout(()=>ind.classList.remove('show'),900); }
+  function showVol(vid) { const pct=vid.muted?0:Math.round(vid.volume*100); document.getElementById('tvVolLabel').textContent=pct+'%'; document.getElementById('tvVolFill').style.height=pct+'%'; const ind=document.getElementById('tvVolIndicator'); ind.classList.add('show'); clearTimeout(volHideTimer); volHideTimer=setTimeout(()=>ind.classList.remove('show'),1200); }
+  function playerNav(e, vid) {
+    if (!document.getElementById('playerOverlay').classList.contains('open')) return false;
+    if (matchKey(e,KEY.BACK)){e.preventDefault();document.getElementById('playerBackBtn').click();return true;}
+    const epsOpen=document.getElementById('awEpsPanel').classList.contains('open'),subOpen=document.getElementById('awSubPanel').classList.contains('open'),setOpen=document.getElementById('awSettingsPanel').classList.contains('open'),anyPanel=epsOpen||subOpen||setOpen;
+    if (anyPanel) {
+      if (epsOpen) { const items=Array.from(document.querySelectorAll('.ep-list-item')); if(!items.length)return true; if(!tvFocusEl||!items.includes(tvFocusEl)){setFocus(items[0]);return true;} if(matchKey(e,KEY.UP)){e.preventDefault();const idx=items.indexOf(tvFocusEl);if(idx>0)setFocus(items[idx-1]);return true;} if(matchKey(e,KEY.DOWN)){e.preventDefault();const idx=items.indexOf(tvFocusEl);if(idx<items.length-1)setFocus(items[idx+1]);return true;} if(matchKey(e,KEY.ENTER)){e.preventDefault();if(tvFocusEl)tvFocusEl.click();return true;} if(matchKey(e,KEY.LEFT)||matchKey(e,KEY.RIGHT)){e.preventDefault();if(window.closeAllPanels)window.closeAllPanels();clearFocus();return true;} }
+      if (subOpen||setOpen) { const opts=Array.from(document.querySelectorAll(subOpen?'#awSubPanel .aw-sub-opt':'#awSettingsPanel .aw-chip,#awSettingsPanel .aw-swatch')); if(!opts.length)return true; if(!tvFocusEl||!opts.includes(tvFocusEl)){setFocus(opts[0]);return true;} if(matchKey(e,KEY.UP)){e.preventDefault();const idx=opts.indexOf(tvFocusEl);if(idx>0)setFocus(opts[idx-1]);return true;} if(matchKey(e,KEY.DOWN)){e.preventDefault();const idx=opts.indexOf(tvFocusEl);if(idx<opts.length-1)setFocus(opts[idx+1]);return true;} if(matchKey(e,KEY.ENTER)){e.preventDefault();if(tvFocusEl)tvFocusEl.click();return true;} if(matchKey(e,KEY.LEFT)||matchKey(e,KEY.RIGHT)){e.preventDefault();if(window.closeAllPanels)window.closeAllPanels();clearFocus();return true;} }
+      return true;
+    }
+    if(matchKey(e,KEY.ENTER)||matchKey(e,KEY.PLAY_PAUSE)){e.preventDefault();if(tvFocusEl&&document.getElementById('playerOverlay').contains(tvFocusEl)){tvFocusEl.click();}else{vid.paused?vid.play():vid.pause();}return true;}
+    if(matchKey(e,KEY.LEFT)){e.preventDefault();const ctrlFocused=tvFocusEl&&document.querySelector('.aw-ctrl-bar')?.contains(tvFocusEl);if(ctrlFocused){const btns=Array.from(document.querySelectorAll('.aw-ctrl-bar .aw-btn'));const idx=btns.indexOf(tvFocusEl);if(idx>0){setFocus(btns[idx-1]);return true;}}vid.currentTime=Math.max(0,vid.currentTime-10);showSeek(-10);if(window._awShowCtrl)window._awShowCtrl();return true;}
+    if(matchKey(e,KEY.RIGHT)){e.preventDefault();const ctrlFocused=tvFocusEl&&document.querySelector('.aw-ctrl-bar')?.contains(tvFocusEl);if(ctrlFocused){const btns=Array.from(document.querySelectorAll('.aw-ctrl-bar .aw-btn'));const idx=btns.indexOf(tvFocusEl);if(idx>=0&&idx<btns.length-1){setFocus(btns[idx+1]);return true;}}vid.currentTime=Math.min(vid.duration||0,vid.currentTime+10);showSeek(+10);if(window._awShowCtrl)window._awShowCtrl();return true;}
+    if(matchKey(e,KEY.UP)){e.preventDefault();const v=Math.min(1,vid.volume+0.1);vid.volume=v;vid.muted=false;document.getElementById('awVolSlider').value=v;showVol(vid);return true;}
+    if(matchKey(e,KEY.DOWN)){e.preventDefault();const v=Math.max(0,vid.volume-0.1);vid.volume=v;vid.muted=v===0;document.getElementById('awVolSlider').value=v;showVol(vid);return true;}
+    if(matchKey(e,KEY.FF)){e.preventDefault();vid.currentTime=Math.min(vid.duration||0,vid.currentTime+30);showSeek(+30);return true;}
+    if(matchKey(e,KEY.RW)){e.preventDefault();vid.currentTime=Math.max(0,vid.currentTime-30);showSeek(-30);return true;}
+    return false;
+  }
+  function detailNav(e) {
+    if (!document.getElementById('detailOverlay').classList.contains('open')) return false;
+    if(matchKey(e,KEY.BACK)){e.preventDefault();document.getElementById('detailCloseBtn').click();clearFocus();return true;}
+    const focusables=getFocusables(document.getElementById('detailOverlay')); if(!focusables.length)return true;
+    if(!tvFocusEl||!focusables.includes(tvFocusEl)){const pb=document.getElementById('detailPlayBtn');setFocus(pb||focusables[0]);return true;}
+    if(matchKey(e,KEY.ENTER)){e.preventDefault();tvFocusEl.click();return true;}
+    let dir=null; if(matchKey(e,KEY.UP))dir='up'; if(matchKey(e,KEY.DOWN))dir='down'; if(matchKey(e,KEY.LEFT))dir='left'; if(matchKey(e,KEY.RIGHT))dir='right'; if(!dir)return true;
+    e.preventDefault(); const next=nearest(focusables,tvFocusEl,dir); if(next)setFocus(next); return true;
+  }
+  function homeNav(e) {
+    const allF=[document.getElementById('q'),document.getElementById('searchBtn'),...Array.from(document.querySelectorAll('.result-card,.dl-ep-play,.dl-ep-delete,.dl-anime-delete-all'))].filter(el=>{if(!el)return false;const r=el.getBoundingClientRect();return r.width>0&&r.height>0;});
+    if(!allF.length)return false;
+    if(!tvFocusEl||!allF.includes(tvFocusEl)){setFocus(allF[0]);return true;}
+    if(matchKey(e,KEY.ENTER)){e.preventDefault();if(tvFocusEl===document.getElementById('q')){tvFocusEl.focus();}else{tvFocusEl.click();}return true;}
+    let dir=null; if(matchKey(e,KEY.UP))dir='up'; if(matchKey(e,KEY.DOWN))dir='down'; if(matchKey(e,KEY.LEFT))dir='left'; if(matchKey(e,KEY.RIGHT))dir='right'; if(!dir)return false;
+    e.preventDefault(); const next=nearest(allF,tvFocusEl,dir); if(next)setFocus(next); return true;
+  }
+  document.addEventListener('keydown', function(e) {
+    const vid=document.getElementById('awVid');
+    const playerOpen=document.getElementById('playerOverlay').classList.contains('open');
+    const detailOpen=document.getElementById('detailOverlay').classList.contains('open');
+    if(playerOpen){playerNav(e,vid);return;} if(detailOpen){detailNav(e);return;} homeNav(e);
+  });
+  document.getElementById('detailCloseBtn').addEventListener('click', () => clearFocus());
+  document.getElementById('playerBackBtn').addEventListener('click', () => clearFocus());
+  document.addEventListener('mousemove', () => { if(tvFocusEl)clearFocus(); });
+  document.addEventListener('click', () => { if(tvFocusEl)clearFocus(); });
+})();
+</script>
+</body>
+</html>
