@@ -5,8 +5,6 @@ const CryptoJS = require("crypto-js");
 const path = require("path");
 const fs = require("fs");
 const https = require("https");
-const { Resend } = require("resend");
-const resend = new Resend("re_AJ5Qwo7h_L289s7rtn2N1iyPtQRMRKNQP");
 
 const app = express();
 const PORT = 3000;
@@ -998,45 +996,6 @@ app.get("/proxy", async (req, res) => {
   } catch (err) {
     console.error("[/proxy]", err.message);
     res.status(500).send(err.message);
-  }
-});
-
-app.post("/api/auth/send-otp", express.json(), async (req, res) => {
-  const { email, displayName, username, passwordHash } = req.body;
-  if (!email || !displayName || !username || !passwordHash) {
-    return res.status(400).json({ error: "Missing fields" });
-  }
-
-  const code = String(Math.floor(100000 + Math.random() * 900000));
-  const expires = Date.now() + 10 * 60 * 1000;
-  otpStore.set(email.toLowerCase(), { code, expires, displayName, username, passwordHash });
-
-  try {
-    const { error } = await resend.emails.send({
-      from: "AniSearch <onboarding@resend.dev>",
-      to: email,
-      subject: "Your AniSearch verification code",
-      html: `
-        <div style="font-family:system-ui,sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;background:#080810;color:#e8e8f0;border-radius:12px;">
-          <div style="font-size:32px;font-weight:900;letter-spacing:0.1em;color:#ff6b35;margin-bottom:8px;">AniSearch</div>
-          <p style="color:#666688;font-size:14px;margin-bottom:28px;">Verify your email to finish creating your account.</p>
-          <div style="background:#0f0f1e;border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:24px;text-align:center;margin-bottom:24px;">
-            <div style="font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#666688;margin-bottom:12px;">Your verification code</div>
-            <div style="font-size:42px;font-weight:800;letter-spacing:0.3em;color:#ff6b35;">${code}</div>
-            <div style="font-size:11px;color:#666688;margin-top:12px;">Expires in 10 minutes</div>
-          </div>
-          <p style="font-size:12px;color:#444466;">If you didn't request this, you can safely ignore this email.</p>
-        </div>
-      `,
-    });
-
-    if (error) throw new Error(error.message);
-
-    console.log("[OTP] Code for", email, "->", code);
-    res.json({ ok: true });
-  } catch (err) {
-    console.error("[OTP] Mail error:", err.message);
-    res.status(500).json({ error: "Failed to send email: " + err.message });
   }
 });
 
